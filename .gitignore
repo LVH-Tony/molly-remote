@@ -1,0 +1,22 @@
+# personal backups / caches
+old-playlists/
+__pycache__/
+.DS_Store
+._*
+
+# Android / Capacitor build output (rebuild with `npm run apk`)
+app/node_modules/
+app/web/
+app/MollyRemote.apk
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/android/capacitor-cordova-android-plugins/build/
+app/android/local.properties
+app/android/.idea/
+app/android/app/src/main/assets/public/
+app/android/app/src/main/assets/capacitor.config.json
+app/android/app/src/main/assets/capacitor.plugins.json
+*.keystore
+*.jks
+playlists.json

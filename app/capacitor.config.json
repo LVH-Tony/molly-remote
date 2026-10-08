@@ -1,0 +1,13 @@
+{
+  "appId": "io.github.lvhtony.mollyremote",
+  "appName": "Molly Remote",
+  "webDir": "web",
+  "android": {
+    "backgroundColor": "#0b1115"
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
+  }
+}

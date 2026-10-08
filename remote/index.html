@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Molly Remote</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%232bb3a3'/%3E%3Cpath d='M9 7v10l8-5z' fill='%230b1115'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b1115; --bg2:#0f171c; --panel:#131d23; --panel2:#18252c; --hover:#1c2a32; --line:#22323b;
+  --text:#e7eff2; --muted:#93a6ae; --dim:#5f747d;
+  --accent:#2bb3a3; --accent-hi:#3fd0bf; --accent-soft:rgba(43,179,163,.14);
+  --danger:#e5675f; --warn:#e2b04a;
+  --r:12px; --side-w:236px; --player-h:88px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:14px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.ic{width:20px;height:20px;fill:currentColor;flex:none}
+.ic.sm{width:16px;height:16px}.ic.lg{width:28px;height:28px}
+
+/* ---------- layout */
+.app{display:grid;grid-template-columns:var(--side-w) 1fr;grid-template-rows:1fr var(--player-h);height:100dvh;
+  padding-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));padding-bottom:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))}
+.side{grid-column:1;grid-row:1;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:auto;padding:16px 12px}
+.main{grid-column:2;grid-row:1;overflow:auto;position:relative;scroll-behavior:smooth}
+.player{grid-column:1/3;grid-row:2}
+.tabbar{display:none}
+
+.brand{display:flex;gap:10px;align-items:center;padding:4px 8px 16px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#1a6f86);display:grid;place-items:center;color:#06221f}
+.brand b{display:block;font-size:15px;letter-spacing:.2px}
+.brand small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.dot.on{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dot.off{background:var(--danger)}
+
+.side-search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 2px 14px;color:var(--muted)}
+.side-search input{background:none;border:0;outline:0;flex:1;min-width:0}
+.side-search:focus-within{border-color:var(--accent)}
+.nav a{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:9px;color:var(--muted);font-weight:500}
+.nav a:hover{background:var(--hover);color:var(--text)}
+.nav a.on{background:var(--accent-soft);color:var(--accent-hi)}
+.nav-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:18px 10px 6px}
+.badge{margin-left:auto;font-size:11px;background:var(--panel2);color:var(--muted);padding:1px 7px;border-radius:20px}
+.scan{margin-top:auto;display:flex;gap:8px;align-items:center;font-size:12px;color:var(--accent-hi);padding:10px;background:var(--accent-soft);border-radius:10px}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- views */
+.view{padding:28px 32px 120px;max-width:1400px}
+.vh{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.vh h1{margin:0;font-size:28px;letter-spacing:-.4px;line-height:1.15}
+.vh .sub{color:var(--muted);margin-top:4px}
+.vh .grow{flex:1;min-width:0}
+.crumbs{color:var(--muted);font-size:13px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap}
+.crumbs a:hover{color:var(--text)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;background:var(--accent);color:#04201c;font-weight:600;white-space:nowrap}
+.btn:hover{background:var(--accent-hi)}
+.btn.ghost{background:var(--panel2);color:var(--text);font-weight:500}
+.btn.ghost:hover{background:var(--hover)}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid rgba(229,103,95,.4)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.icon-btn{width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;color:var(--muted)}
+.icon-btn:hover{background:var(--hover);color:var(--text)}
+.icon-btn.on{color:var(--accent-hi)}
+.input{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:0;width:100%}
+.input:focus{border-color:var(--accent)}
+.filter{max-width:320px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:18px}
+.seg a{padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
+.seg a.on{background:var(--panel2);color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+.banner{margin:16px 32px 0;padding:12px 16px;border-radius:10px;background:rgba(229,103,95,.12);color:#f3b3ae;border:1px solid rgba(229,103,95,.3)}
+.sect{margin:26px 0 8px}
+.sect h2{font-size:18px;margin:0 0 12px;display:flex;align-items:baseline;gap:8px}
+.sect h2 small{color:var(--dim);font-weight:500;font-size:13px}
+
+/* ---------- art */
+.art{width:40px;height:40px;border-radius:6px;object-fit:cover;background:var(--panel2);flex:none;display:block}
+.art.ph{display:grid;place-items:center;background:linear-gradient(135deg,hsl(var(--h) 45% 34%),hsl(calc(var(--h) + 50) 40% 18%));color:rgba(255,255,255,.85);font-weight:700;letter-spacing:.5px;font-size:13px;overflow:hidden}
+.art.md{width:100%;height:auto;aspect-ratio:1;border-radius:10px}
+.art.md.ph{font-size:32px}
+.art.lg{width:200px;height:200px;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.art.lg.ph{font-size:48px}
+.art.xl{width:min(420px,72vw);height:min(420px,72vw);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.art.xl.ph{font-size:80px}
+.mosaic{width:200px;height:200px;border-radius:14px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;box-shadow:0 12px 40px rgba(0,0,0,.45);flex:none}
+.mosaic .art{width:100%;height:100%;border-radius:0;font-size:20px}
+.mosaic.one{grid-template-columns:1fr}
+
+/* ---------- cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:18px}
+.card{display:block;border-radius:var(--r);padding:10px;margin:-10px;min-width:0}
+.card:hover{background:var(--panel)}
+.card-art{position:relative}
+.card-play{position:absolute;right:8px;bottom:8px;width:42px;height:42px;border-radius:50%;background:var(--accent);color:#04201c;display:grid;place-items:center;opacity:0;transform:translateY(6px);transition:.15s;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.card:hover .card-play,.card:focus-within .card-play{opacity:1;transform:none}
+.card-t{margin-top:8px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-s{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.round .art{border-radius:50%}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:12.5px;white-space:nowrap}
+a.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip b{color:var(--text);font-weight:600}
+.chip.hi{color:var(--accent-hi);border-color:rgba(43,179,163,.35);background:var(--accent-soft)}
+
+/* ---------- track list */
+.tl{border-top:1px solid var(--line)}
+.tr{display:grid;grid-template-columns:28px 40px minmax(0,1fr) minmax(0,.7fr) 56px 34px;gap:12px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;position:relative}
+.tr:hover{background:var(--hover)}
+.tr .ck{display:grid;place-items:center}
+.tr .ck input{width:16px;height:16px;accent-color:var(--accent);opacity:.35;cursor:pointer;margin:0}
+.tr:hover .ck input,.tr .ck input:checked,.selecting .tr .ck input{opacity:1}
+.tr .num{color:var(--dim);text-align:center;font-variant-numeric:tabular-nums;font-size:13px}
+.tr .lead{display:grid;place-items:center;width:40px}
+.tr .m{min-width:0}
+.tr .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.tr .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12.5px}
+.tr .al{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:13px}
+.tr .d{color:var(--dim);text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.tr .mo{opacity:0}
+.tr:hover .mo,.tr .mo:focus{opacity:1}
+.tr.playing .t{color:var(--accent-hi)}
+.tr.sel{background:var(--accent-soft)}
+.tr.missing .t{color:var(--danger);text-decoration:line-through}
+.tr.dragging{opacity:.4}
+.tr.drop-above{box-shadow:inset 0 2px 0 var(--accent)}
+.tr.drop-below{box-shadow:inset 0 -2px 0 var(--accent)}
+.tr .drag{cursor:grab;color:var(--dim)}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.eq i{width:3px;background:var(--accent-hi);border-radius:1px;animation:eq 1s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}
+.paused .eq i{animation-play-state:paused}
+@keyframes eq{0%,100%{height:4px}50%{height:14px}}
+.dirrow{display:flex;align-items:center;gap:12px;padding:8px;border-radius:8px}
+.dirrow:hover{background:var(--hover)}
+.dirrow .ic{color:var(--accent)}
+.dirrow .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+
+/* ---------- header blocks */
+.hero{display:flex;gap:28px;align-items:flex-end;margin-bottom:26px;flex-wrap:wrap}
+.hero .kind{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.hero h1{font-size:clamp(26px,4vw,44px);margin:6px 0 8px;letter-spacing:-.8px;line-height:1.08}
+.hero .meta{color:var(--muted)}
+.hero .meta a:hover{color:var(--text);text-decoration:underline}
+.hero .actions{margin-top:16px}
+
+/* ---------- now playing */
+.now{display:grid;grid-template-columns:auto minmax(0,1fr);gap:40px;align-items:center;margin:10px 0 30px}
+.now h1{font-size:clamp(24px,3.4vw,40px);margin:0 0 6px;letter-spacing:-.6px;line-height:1.12}
+.now .by{font-size:17px;color:var(--muted)}
+.now .by a:hover{color:var(--text);text-decoration:underline}
+.now .chips{margin:18px 0}
+.big-ctrl{display:flex;align-items:center;gap:14px;margin-top:10px}
+.big-play{width:64px;height:64px;border-radius:50%;background:var(--accent);color:#04201c;display:grid;place-items:center}
+.big-play:hover{background:var(--accent-hi)}
+.big-play .ic{width:32px;height:32px}
+
+/* ---------- player bar */
+.player{background:#0d151a;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) minmax(0,1fr);align-items:center;gap:16px;padding:0 18px;position:relative}
+.p-left{display:flex;gap:12px;align-items:center;min-width:0}
+.p-left .art{width:56px;height:56px;border-radius:8px}
+.p-meta{min-width:0}
+.p-title{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-sub{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-center{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.p-btns{display:flex;align-items:center;gap:10px}
+.p-play{width:40px;height:40px;border-radius:50%;background:var(--text);color:var(--bg);display:grid;place-items:center}
+.p-play:hover{transform:scale(1.05)}
+.p-seek{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.p-seek span{width:44px;text-align:center}
+.p-right{display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.icon-btn .rep1{position:absolute;font-size:9px;font-weight:800;margin:10px 0 0 10px;color:var(--accent-hi)}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--accent) var(--p,0%),#2a3a43 var(--p,0%));outline:0;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
+input[type=range]:hover::-webkit-slider-thumb{opacity:1}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
+.mini-prog{display:none}
+
+/* ---------- floating */
+#selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--player-h) + 16px);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 18px;display:flex;align-items:center;gap:6px;box-shadow:0 14px 40px rgba(0,0,0,.5);z-index:30;max-width:calc(100vw - 24px);overflow-x:auto}
+#selbar b{margin-right:8px;white-space:nowrap}
+#menu{position:fixed;z-index:50;min-width:220px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+#menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;text-align:left}
+#menu button:hover{background:var(--hover)}
+#menu button.danger{color:var(--danger)}
+#menu hr{border:0;border-top:1px solid var(--line);margin:5px 4px}
+#menu .mh{padding:6px 10px 8px;color:var(--muted);font-size:12px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#modal{position:fixed;inset:0;background:rgba(3,8,10,.65);backdrop-filter:blur(4px);z-index:60;display:grid;place-items:center;padding:16px}
+.modal-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(440px,100%);max-height:80vh;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal-card h3{margin:0;font-size:18px}
+.modal-btns{display:flex;justify-content:flex-end;gap:8px}
+.pick{overflow:auto;margin:0 -8px;min-height:120px}
+.pick button{display:flex;gap:12px;align-items:center;width:100%;padding:8px;border-radius:8px;text-align:left}
+.pick button:hover{background:var(--hover)}
+.pick small{color:var(--muted);margin-left:auto}
+#toasts{position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:70;pointer-events:none}
+.toast{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--accent);padding:10px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:tin .2s ease;max-width:340px}
+.toast.err{border-left-color:var(--danger)}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 18px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.panel h3{margin:0 0 12px;font-size:15px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:12.5px}
+.devs{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px}
+.dev{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);text-align:left;width:100%}
+.dev:hover{border-color:var(--accent)}
+.dev b{display:block}.dev small{color:var(--muted)}
+.steps{margin:6px 0 0;padding-left:20px;color:var(--muted)}.steps li{margin:4px 0}
+
+/* ---------- touch screens (phones, Fold inner screen): nothing may depend on hover */
+@media (hover:none){
+  .tr .mo,.card-play{opacity:1;transform:none}
+  .tr .ck input{opacity:.55}
+  .tr:hover{background:transparent}
+  .tr:active{background:var(--hover)}
+  input[type=range]::-webkit-slider-thumb{opacity:1}
+  .icon-btn{width:40px;height:40px}
+}
+/* ---------- mid widths: Fold inner screen (~840dp), tablets */
+@media (min-width:821px) and (max-width:1100px){
+  :root{--side-w:200px}
+  .view{padding:22px 22px 120px}
+  .player{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:10px;padding:0 12px}
+  .p-right .chip{display:none}
+  .tr{grid-template-columns:28px 40px minmax(0,1fr) minmax(0,.5fr) 48px 40px;gap:10px}
+  .now{gap:28px}
+  .art.xl{width:min(340px,40vw);height:min(340px,40vw)}
+}
+@media (min-width:821px) and (max-height:820px){ .art.xl{width:min(340px,48vh);height:min(340px,48vh)} }
+
+/* ---------- mobile */
+@media (max-width:820px){
+  :root{--player-h:64px}
+  .app{grid-template-columns:1fr;grid-template-rows:1fr auto auto}
+  .side{display:none}
+  .main{grid-column:1}
+  .player{grid-column:1;grid-row:2;grid-template-columns:minmax(0,1fr) auto;padding:0 12px;height:var(--player-h)}
+  .p-left .art{width:44px;height:44px}
+  .p-seek,.p-right,.p-btns .opt{display:none}
+  .p-center{flex-direction:row}
+  .mini-prog{display:block;position:absolute;left:0;right:0;top:-1px;height:2px;background:#24343d}
+  .mini-prog i{display:block;height:100%;background:var(--accent);width:0}
+  .tabbar{display:flex;grid-row:3;background:#0d151a;border-top:1px solid var(--line)}
+  .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;font-size:11px;color:var(--dim)}
+  .tabbar a.on{color:var(--accent-hi)}
+  .view{padding:18px 16px 120px}
+  .vh h1{font-size:24px}
+  .tr{grid-template-columns:24px 40px minmax(0,1fr) 34px;gap:10px;padding:6px 4px}
+  .tr .al,.tr .d{display:none}
+  .tr .mo{opacity:1}
+  .tr .ck input{opacity:.5}
+  .now{grid-template-columns:1fr;justify-items:center;text-align:center;gap:22px}
+  .now .chips,.big-ctrl{justify-content:center}
+  .hero{gap:18px}
+  .art.lg,.mosaic{width:140px;height:140px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px}
+  .card-play{opacity:1;transform:none;width:36px;height:36px}
+  #selbar{bottom:calc(var(--player-h) + 64px)}
+  #menu{left:8px!important;right:8px;top:auto!important;bottom:8px;min-width:0}
+  #menu button{padding:12px 10px}
+  .banner{margin:12px 16px 0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg class="ic" viewBox="0 0 24 24"><path d="M9 7v10l8-5z"/></svg></div>
+      <div><b>Molly Remote</b><small><span class="dot" id="connDot"></span><span id="connLabel">Connecting…</span></small></div>
+    </div>
+    <label class="side-search"><svg class="ic sm" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input id="sideSearch" placeholder="Search  ( / )" autocomplete="off" spellcheck="false"></label>
+    <nav class="nav" id="nav"></nav>
+    <div class="scan" id="scan" hidden><span class="spin"></span>Scanning SD card…</div>
+  </aside>
+  <main class="main" id="main"><div id="banner"></div><div id="view" class="view"></div></main>
+  <footer class="player" id="player">
+    <div class="mini-prog"><i id="miniProg"></i></div>
+    <div class="p-left">
+      <a href="#now" id="pArt"></a>
+      <div class="p-meta"><a href="#now" class="p-title" id="pTitle">Nothing playing</a><div class="p-sub" id="pSub">Pick a playlist to start</div></div>
+    </div>
+    <div class="p-center">
+      <div class="p-btns">
+        <button class="icon-btn opt" data-act="random" id="bRandom" title="Shuffle"></button>
+        <button class="icon-btn opt" data-act="prev" title="Previous"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+        <button class="p-play" data-act="toggle" id="bPlay" title="Play/Pause (space)"></button>
+        <button class="icon-btn" data-act="next" title="Next"><svg class="ic" viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg></button>
+        <button class="icon-btn opt" data-act="repeat" id="bRepeat" title="Repeat"></button>
+      </div>
+      <div class="p-seek"><span id="tEl">0:00</span><input type="range" id="seek" min="0" max="1" value="0" step="1" aria-label="Seek"><span id="tDur">0:00</span></div>
+    </div>
+    <div class="p-right">
+      <span class="chip" id="pFmt" hidden></span>
+      <a class="icon-btn" href="#queue" title="Queue" id="bQueue"></a>
+    </div>
+  </footer>
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+<div id="selbar" hidden></div>
+<div id="menu" hidden></div>
+<div id="modal" hidden></div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+// ============================================================ icons
+const ICON = {
+  play:'M8 5v14l11-7z', pause:'M6 5h4v14H6zM14 5h4v14h-4z',
+  prev:'M6 6h2v12H6zm3.5 6 8.5 6V6z', next:'M16 6h2v12h-2zM6 18l8.5-6L6 6z',
+  shuffle:'M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z',
+  repeat:'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z',
+  more:'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  queue:'M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z',
+  playlist:'M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm13-1v8l6-4z',
+  artist:'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  album:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 14.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-5.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+  genre:'M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.05.59 1.42l9 9a2 2 0 0 0 2.82 0l7-7a2 2 0 0 0 0-2.84zM5.5 7A1.5 1.5 0 1 1 7 5.5 1.5 1.5 0 0 1 5.5 7z',
+  folder:'M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z',
+  search:'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+  settings:'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z',
+  now:'M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z',
+  add:'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z',
+  close:'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
+  drag:'M11 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm-2-8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0-6a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+  next_up:'M3 10h11v2H3zm0-4h11v2H3zm0 8h7v2H3zm14-3V8h-2v3h-3v2h3v3h2v-3h3v-2z',
+  trash:'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+  edit:'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  save:'M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z',
+  refresh:'M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
+  check:'M9 16.17 4.83 12l-1.42 1.42L9 19 21 7l-1.41-1.41z',
+  copy:'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z',
+  broom:'M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z',
+  dot:'M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+};
+const ic = (n, cls='') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICON[n]||ICON.dot}"/></svg>`;
+
+// ============================================================ utils
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fold = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
+const fmt = s => { s = Math.max(0, Math.floor(s||0)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=String(s%60).padStart(2,'0'); return h ? `${h}:${String(m).padStart(2,'0')}:${x}` : `${m}:${x}`; };
+const fmtLong = s => { const h=Math.floor(s/3600), m=Math.round(s%3600/60); return h ? `${h} hr ${m} min` : `${m} min`; };
+const plural = (n, w) => `${n.toLocaleString()} ${w}${n===1?'':'s'}`;
+const hashStr = s => { let h=7; for (const c of String(s)) h = (h*31 + c.codePointAt(0)) | 0; return Math.abs(h); };
+const go = (...parts) => '#' + parts.map(p => encodeURIComponent(p)).join('/');
+const route = () => { const h = location.hash.slice(1); return h ? h.split('/').map(decodeURIComponent) : ['playlists']; };
+const dirOf = f => f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : '';
+const sum = (arr, f) => arr.reduce((a, x) => a + (f(x)||0), 0);
+const initials = s => (String(s).replace(/[\[(].*?[\])]/g,'').match(/[\p{L}\p{N}]+/gu) || ['♪']).slice(0,2).map(w => [...w][0]).join('').toUpperCase();
+
+// ============================================================ MPD api
+// Browser: through remote/server.py. Android app: straight to the Poly via the native Mpd plugin (app/android/.../MpdPlugin.java).
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const Mpd = NATIVE ? window.Capacitor.Plugins.Mpd : null;   // proxy injected by the native bridge (no @capacitor/core bundle needed)
+async function api(cmds) {
+  if (NATIVE) {
+    try { return (await Mpd.run({commands:cmds.map(c => c.map(String))})).results; }
+    catch (e) { throw new Error(e.message || String(e)); }
+  }
+  const r = await fetch('/api/mpd', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({commands:cmds.map(c => c.map(String))})});
+  const j = await r.json().catch(() => ({error:'Bad response from bridge'}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j.results;
+}
+const obj = pairs => Object.fromEntries(pairs);
+function group(pairs) {
+  const out = []; let cur = null;
+  for (const [k, v] of pairs) {
+    if (k === 'file' || k === 'directory' || k === 'playlist') { cur = {_type:k, [k]:v}; out.push(cur); }
+    else if (cur) cur[k] = v;
+  }
+  return out;
+}
+function songFrom(o) {
+  const parts = o.file.split('/'), dir = parts.slice(0, -1);
+  const fname = parts[parts.length-1] || o.file;
+  const s = {
+    file:o.file,
+    title:o.Title || fname.replace(/\.[^.]+$/, ''),
+    artist:o.Artist || o.AlbumArtist || dir[dir.length-2] || 'Unknown artist',
+    albumArtist:o.AlbumArtist || o.Artist || dir[dir.length-2] || 'Unknown artist',
+    album:o.Album || dir[dir.length-1] || 'Unknown album',
+    genre:(o.Genre || '').trim().replace(/(^|[\s/-])\p{Ll}/gu, c => c.toUpperCase()), date:(o.Date || '').slice(0,4),
+    dur:+(o.duration || o.Time || 0), track:parseInt(o.Track) || 0, disc:parseInt(o.Disc) || 1,
+    format:o.Format || '', added:o['Last-Modified'] || '',
+  };
+  if (o.Id != null) s.id = o.Id;
+  if (o.Pos != null) s.pos = +o.Pos;
+  s.hay = fold([s.title, s.artist, s.albumArtist, s.album, s.genre].join(' '));
+  return s;
+}
+const hidden = f => f.split('/').some(p => p.startsWith('.'));
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('molly', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('kv'); r.result.createObjectStore('art'); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction(store, mode); const q = fn(t.objectStore(store)); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+  return { get:(st, k) => tx(st, 'readonly', o => o.get(k)).catch(() => undefined), set:(st, k, v) => tx(st, 'readwrite', o => o.put(v, k)).catch(() => undefined) };
+})();
+const hostKey = () => NATIVE ? (S.info.mpd || '') : 'bridge';
+
+// ============================================================ state
+const S = { status:{}, statusAt:0, current:null, queue:[], playlists:[], lists:[], sel:new Set(), conn:null, info:{}, menu:[], drag:null, q:'' };
+const L = { songs:[], byFile:new Map(), albums:new Map(), albumList:[], artists:new Map(), artistList:[], genres:new Map(), genreList:[], ready:false };
+
+async function loadLibrary() {
+  const [st] = await api([['stats']]);
+  const stamp = obj(st).db_update, key = 'lib|' + hostKey();
+  const cached = await idb.get('kv', key);
+  let pairs;
+  if (cached && cached.stamp === stamp) pairs = cached.pairs;
+  else { [pairs] = await api([['listallinfo']]); idb.set('kv', key, {stamp, pairs}); }
+  const songs = group(pairs).filter(o => o._type === 'file' && !hidden(o.file)).map(songFrom);
+  L.songs = songs; L.byFile = new Map(songs.map(s => [s.file, s]));
+  L.albums = new Map(); L.artists = new Map(); L.genres = new Map();
+  for (const s of songs) {
+    const k = s.albumArtist + '\u0001' + s.album;
+    let a = L.albums.get(k);
+    if (!a) L.albums.set(k, a = {key:k, name:s.album, artist:s.albumArtist, songs:[], date:'', added:'', genre:s.genre});
+    a.songs.push(s);
+    if (s.date && (!a.date || s.date < a.date)) a.date = s.date;
+    if (s.added > a.added) a.added = s.added;
+    let ar = L.artists.get(s.albumArtist);
+    if (!ar) L.artists.set(s.albumArtist, ar = {name:s.albumArtist, albums:[], songs:[]});
+    ar.songs.push(s);
+    const g = s.genre || 'Unknown';
+    if (!L.genres.has(g)) L.genres.set(g, {name:g, songs:[]});
+    L.genres.get(g).songs.push(s);
+  }
+  for (const a of L.albums.values()) {
+    a.songs.sort((x, y) => x.disc - y.disc || x.track - y.track || x.file.localeCompare(y.file));
+    a.dur = sum(a.songs, s => s.dur);
+    L.artists.get(a.artist).albums.push(a);
+  }
+  const byName = (x, y) => fold(x.name).localeCompare(fold(y.name));
+  L.albumList = [...L.albums.values()].sort((x, y) => fold(x.artist).localeCompare(fold(y.artist)) || (x.date||'').localeCompare(y.date||'') || byName(x, y));
+  L.artistList = [...L.artists.values()].sort(byName);
+  for (const ar of L.artistList) ar.albums.sort((x, y) => (x.date||'').localeCompare(y.date||'') || byName(x, y));
+  L.genreList = [...L.genres.values()].sort((x, y) => y.songs.length - x.songs.length);
+  L.ready = true;
+}
+const songOf = f => L.byFile.get(f) || Object.assign(songFrom({file:f}), {missing:L.ready});
+
+function plMeta(name) {
+  const m = name.match(/^(\d+)\.\s*(.+?)\s+-\s+(.+)$/);
+  return m ? {group:m[2].trim(), order:+m[1], title:m[3]} : {group:'My playlists', order:0, title:name};
+}
+async function loadPlaylists() {
+  const [pairs] = await api([['listplaylists']]);
+  const names = pairs.filter(p => p[0] === 'playlist').map(p => p[1]);
+  const res = names.length ? await api(names.map(n => ['listplaylist', n])) : [];
+  S.playlists = names.map((n, i) => ({name:n, files:res[i].filter(p => p[0] === 'file').map(p => p[1]), ...plMeta(n)}))
+    .sort((a, b) => a.order - b.order || a.group.localeCompare(b.group) || a.title.localeCompare(b.title, undefined, {numeric:true}));
+}
+async function loadQueue() {
+  const [pairs] = await api([['playlistinfo']]);
+  S.queue = group(pairs).filter(o => o._type === 'file').map(o => { const s = songFrom(o); const lib = L.byFile.get(s.file); return lib ? {...lib, id:s.id, pos:s.pos} : s; });
+  $('#qCount') && ($('#qCount').textContent = S.queue.length || '');
+}
+async function refreshStatus() {
+  const [st, cs] = await api([['status'], ['currentsong']]);
+  const prev = S.status.songid, prevPlaying = S.status.state;
+  S.status = obj(st); S.statusAt = performance.now();
+  const c = group(cs)[0];
+  S.current = c ? (L.byFile.get(c.file) ? {...L.byFile.get(c.file), id:c.Id, pos:+c.Pos} : songFrom(c)) : null;
+  updatePlayer();
+  $('#scan').hidden = !S.status.updating_db;
+  if (prev !== S.status.songid || prevPlaying !== S.status.state) {
+    markPlaying();
+    if (route()[0] === 'now') render(true);
+  }
+}
+
+// ============================================================ art
+const artFailed = new Set();
+function ph(label, size) { return `<div class="art ph ${size}" style="--h:${hashStr(label) % 360}"><span>${esc(initials(label))}</span></div>`; }
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const artURL = new Map();   // dir -> object URL (native)
+function art(song, size='') {
+  if (!song) return ph('♪', size);
+  const dir = dirOf(song.file), label = song.album || song.title;
+  if (artFailed.has(dir)) return ph(label, size);
+  if (NATIVE) return `<img class="art ${size}" alt="" src="${artURL.get(dir) || BLANK}" data-uri="${esc(song.file)}" data-dir="${esc(dir)}" data-label="${esc(label)}" data-size="${size}" onerror="artFail(this)">`;
+  return `<img class="art ${size}" loading="lazy" alt="" src="/api/art?uri=${encodeURIComponent(song.file)}" data-dir="${esc(dir)}" data-label="${esc(label)}" data-size="${size}" onerror="artFail(this)">`;
+}
+window.artFail = img => { artFailed.add(img.dataset.dir); img.outerHTML = ph(img.dataset.label, img.dataset.size); };
+if (NATIVE) {
+  const inflight = new Map();
+  const fetchArt = dir => inflight.get(dir) || inflight.set(dir, (async () => {
+    const key = hostKey() + '|' + dir;
+    let rec = await idb.get('art', key);
+    if (!rec || (rec.none && Date.now() - rec.at > 864e5)) {
+      const {data} = await Mpd.albumart({uri:dir + '/x'}).catch(() => ({data:null}));
+      if (data) { const bin = atob(data), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); rec = {blob:new Blob([u8], {type:u8[0] === 0x89 ? 'image/png' : 'image/jpeg'})}; }
+      else rec = {none:true, at:Date.now()};
+      idb.set('art', key, rec);
+    }
+    if (rec.blob) artURL.set(dir, URL.createObjectURL(rec.blob)); else artFailed.add(dir);
+  })()).get(dir);
+  const io = new IntersectionObserver(entries => entries.forEach(async e => {
+    if (!e.isIntersecting) return;
+    const img = e.target; io.unobserve(img);
+    const dir = img.dataset.dir;
+    await fetchArt(dir);
+    if (artURL.has(dir)) img.src = artURL.get(dir); else if (img.isConnected) artFail(img);
+  }), {rootMargin:'300px'});
+  const watch = root => (root.matches && root.matches('img[data-uri]') ? [root] : []).concat(root.querySelectorAll ? [...root.querySelectorAll('img[data-uri]')] : [])
+    .forEach(img => { if (img.src === BLANK) io.observe(img); });
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => n.nodeType === 1 && watch(n)))).observe(document.body, {childList:true, subtree:true});
+}
+function mosaic(tracks) {
+  const seen = new Set(), picks = [];
+  for (const t of tracks) { const d = dirOf(t.file); if (!seen.has(d)) { seen.add(d); picks.push(t); } if (picks.length === 4) break; }
+  if (picks.length < 4) return `<div class="mosaic one">${art(picks[0])}</div>`;
+  return `<div class="mosaic">${picks.map(t => art(t)).join('')}</div>`;
+}
+
+// ============================================================ track lists
+function registerList(tracks, ctx) { S.lists.push({tracks, ctx}); return S.lists.length - 1; }
+function trackList(tracks, ctx, opt={}) {
+  if (!tracks.length) return `<div class="empty">${esc(opt.empty || 'Nothing here yet.')}</div>`;
+  const l = registerList(tracks, ctx);
+  const drag = !!opt.drag;
+  return `<div class="tl" data-tl="${l}">` + tracks.map((t, i) => {
+    const lead = opt.numbers ? `<span class="num">${t.track || i+1}</span>` : art(t);
+    const sub = opt.numbers ? esc(t.artist) : `${esc(t.artist)}${opt.showAlbum === false ? '' : ''}`;
+    return `<div class="tr${t.missing ? ' missing' : ''}" data-l="${l}" data-i="${i}" data-fk="${esc(t.hay || fold(t.file))}"${drag ? ' draggable="true"' : ''}>
+      <span class="ck">${drag ? `<span class="drag" title="Drag to reorder">${ic('drag','sm')}</span>` : `<input type="checkbox" data-sel aria-label="Select">`}</span>
+      <span class="lead">${lead}</span>
+      <span class="m"><div class="t">${esc(t.title)}</div><div class="s">${sub}${t.missing ? ' · missing from SD card' : ''}</div></span>
+      <span class="al">${esc(t.album)}</span>
+      <span class="d">${t.dur ? fmt(t.dur) : ''}</span>
+      <button class="icon-btn mo" data-act="menu" title="More">${ic('more')}</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+function markPlaying() {
+  const cur = S.current, playing = S.status.state === 'play';
+  $$('.tr').forEach(row => {
+    const L_ = S.lists[+row.dataset.l]; if (!L_) return;
+    const t = L_.tracks[+row.dataset.i];
+    const on = !!cur && (L_.ctx.type === 'queue' ? t.id === S.status.songid : t.file === cur.file);
+    row.classList.toggle('playing', on);
+    row.classList.toggle('paused', on && !playing);
+    const lead = row.querySelector('.lead');
+    if (on && !lead.querySelector('.eq')) { lead.dataset.prev = lead.innerHTML; lead.innerHTML = '<span class="eq"><i></i><i></i><i></i></span>'; }
+    else if (!on && lead.dataset.prev != null) { lead.innerHTML = lead.dataset.prev; delete lead.dataset.prev; }
+  });
+}
+
+// ============================================================ playback actions
+const queueInsertPos = () => S.status.song != null ? +S.status.song + 1 : S.queue.length;
+async function playTracks(tracks, i = 0, shuffle = false, ctx = null) {
+  tracks = tracks.filter(t => !t.missing);
+  if (!tracks.length) return toast('Nothing playable here', true);
+  const cmds = ctx && ctx.type === 'playlist' && ctx.clean ? [['clear'], ['load', ctx.name]] : [['clear'], ...tracks.map(t => ['add', t.file])];
+  cmds.push(['random', '0']);
+  if (shuffle) cmds.push(['shuffle'], ['play', '0']); else cmds.push(['play', i]);
+  await api(cmds);
+  toast(shuffle ? `Shuffling ${plural(tracks.length, 'song')}` : `Playing ${tracks.length > 1 ? plural(tracks.length, 'song') : esc(tracks[0].title)}`);
+}
+async function playNext(tracks) {
+  tracks = tracks.filter(t => !t.missing); const base = queueInsertPos();
+  await api(tracks.map((t, k) => ['addid', t.file, base + k]));
+  toast(`${plural(tracks.length, 'song')} will play next`);
+}
+async function playNow(t) {
+  const [r] = await api([['addid', t.file, queueInsertPos()]]);
+  await api([['playid', obj(r).Id]]);
+}
+async function addToQueue(tracks) {
+  tracks = tracks.filter(t => !t.missing);
+  await api(tracks.map(t => ['add', t.file]));
+  toast(`Added ${plural(tracks.length, 'song')} to queue`);
+}
+async function addToPlaylist(tracks) {
+  tracks = tracks.filter(t => !t.missing);
+  const name = await pickPlaylist(tracks.length);
+  if (!name) return;
+  await api(tracks.map(t => ['playlistadd', name, t.file]));
+  toast(`Added ${plural(tracks.length, 'song')} to “${esc(plMeta(name).title)}”`);
+}
+async function playContext(l, i, shuffle = false) {
+  const {tracks, ctx} = S.lists[l];
+  if (ctx.type === 'queue') return api([['play', tracks[i].pos]]);
+  if (ctx.type === 'playlist') ctx.clean = !tracks.some(t => t.missing);
+  return playTracks(tracks, ctx.clean ? i : tracks.filter((t, k) => k < i && !t.missing).length, shuffle, ctx);
+}
+
+// ============================================================ views
+const VIEWS = {};
+let renderToken = 0;
+async function render(keepScroll = false) {
+  const [view, ...args] = route();
+  const main = $('#main'), top = main.scrollTop, token = ++renderToken;
+  S.lists = []; S.sel.clear(); updateSelBar(); closeMenu();
+  setActiveNav(view);
+  try {
+    const html = await (VIEWS[view] || VIEWS.playlists)(...args);
+    if (token !== renderToken) return;
+    $('#view').innerHTML = html;
+    main.scrollTop = keepScroll ? top : 0;
+    afterRender(view);
+  } catch (e) {
+    if (token === renderToken) $('#view').innerHTML = `<div class="empty">Couldn't load this view.<br><small>${esc(e.message)}</small></div>`;
+  }
+  markPlaying();
+}
+function afterRender(view) {
+  $$('[data-filter]').forEach(inp => { inp.addEventListener('input', () => applyFilter(inp)); if (inp.value) applyFilter(inp); });
+  if (view === 'queue' && !S.queueScrolled) {
+    S.queueScrolled = true;
+    const row = $('.tr.playing'); row && row.scrollIntoView({block:'center'});
+  }
+  if (view === 'search') { const i = $('#bigSearch'); if (i && innerWidth <= 820 && !S.q) i.focus(); }
+}
+function applyFilter(inp) {
+  const toks = fold(inp.value.trim()).split(/\s+/).filter(Boolean);
+  const scope = $('#view');
+  $$(inp.dataset.filter, scope).forEach(el => { el.hidden = toks.length > 0 && !toks.every(t => (el.dataset.fk || '').includes(t)); });
+  $$('[data-sect]', scope).forEach(sec => { sec.hidden = !$$('[data-fk]', sec).some(x => !x.hidden); });
+  S.filtering = toks.length > 0;
+}
+const filterBox = (sel, ph) => `<input class="input filter" data-filter="${sel}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false">`;
+const crumbs = items => `<div class="crumbs">${items.map(([label, href]) => href ? `<a href="${href}">${esc(label)}</a>` : `<span>${esc(label)}</span>`).join('<span>›</span>')}</div>`;
+const libTabs = on => `<div class="seg">${[['artists','Artists'],['albums','Albums'],['genres','Genres'],['folders','Folders']].map(([k, n]) => `<a href="#${k}" class="${k === on ? 'on' : ''}">${n}</a>`).join('')}</div>`;
+
+function albumCard(a) {
+  const i = L.albumList.indexOf(a);
+  return `<a class="card" href="${go('album', a.artist, a.name)}" data-fk="${esc(fold(a.name + ' ' + a.artist + ' ' + a.genre))}">
+    <div class="card-art">${art(a.songs[0], 'md')}<button class="card-play" data-act="play-album" data-ai="${i}" title="Play">${ic('play')}</button></div>
+    <div class="card-t">${esc(a.name)}</div><div class="card-s">${esc(a.artist)}${a.date ? ' · ' + esc(a.date) : ''}</div></a>`;
+}
+
+// ---- Now playing
+VIEWS.now = async () => {
+  const c = S.current, st = S.status;
+  if (!c) return `<div class="vh"><h1>Now Playing</h1></div><div class="empty">Nothing is playing. Pick a <a href="#playlists" style="color:var(--accent-hi)">playlist</a> or <a href="#albums" style="color:var(--accent-hi)">album</a>.</div>`;
+  if (!S.queue.length) await loadQueue();
+  const pos = st.song != null ? +st.song : -1;
+  const upNext = S.queue.slice(pos + 1, pos + 21);
+  const album = L.albums.get(c.albumArtist + '\u0001' + c.album);
+  return `<div class="now">
+      <div>${art(c, 'xl')}</div>
+      <div>
+        <div class="hero"><div><div class="kind">${st.state === 'play' ? 'Now playing' : st.state === 'pause' ? 'Paused' : 'Stopped'}</div></div></div>
+        <h1>${esc(c.title)}</h1>
+        <div class="by"><a href="${go('artist', c.albumArtist)}">${esc(c.artist)}</a> · ${album ? `<a href="${go('album', album.artist, album.name)}">${esc(c.album)}</a>` : esc(c.album)}${c.date ? ' · ' + esc(c.date) : ''}</div>
+        <div class="chips">${formatChips().map(x => `<span class="chip hi">${x}</span>`).join('')}${c.genre ? `<a class="chip" href="${go('genre', c.genre)}">${esc(c.genre)}</a>` : ''}<span class="chip">Track <b>${pos + 1}</b> of <b>${S.queue.length}</b></span></div>
+        <div class="big-ctrl">
+          <button class="icon-btn lg ${st.random === '1' ? 'on' : ''}" data-act="random" title="Shuffle">${ic('shuffle')}</button>
+          <button class="icon-btn" data-act="prev">${ic('prev','lg')}</button>
+          <button class="big-play" data-act="toggle">${ic(st.state === 'play' ? 'pause' : 'play')}</button>
+          <button class="icon-btn" data-act="next">${ic('next','lg')}</button>
+          <button class="icon-btn" data-act="track-menu-current" title="More">${ic('more')}</button>
+        </div>
+      </div>
+    </div>
+    <div class="sect"><h2>Up next <small>${upNext.length ? plural(S.queue.length - pos - 1, 'song') : ''}</small> <a href="#queue" class="btn ghost sm" style="margin-left:auto">Open queue</a></h2>
+    ${trackList(upNext, {type:'queue'}, {empty:'End of the queue.'})}</div>`;
+};
+
+// ---- Queue
+VIEWS.queue = async () => {
+  await loadQueue();
+  const q = S.queue, st = S.status;
+  return `<div class="vh"><div class="grow"><h1>Queue</h1><div class="sub">${plural(q.length, 'song')} · ${fmtLong(sum(q, t => t.dur))}</div></div>
+    <div class="actions">
+      ${filterBox('.tr', 'Filter queue')}
+      <button class="btn ghost sm" data-act="q-shuffle">${ic('shuffle','sm')}Shuffle order</button>
+      <button class="btn ghost sm" data-act="q-dedupe">${ic('broom','sm')}Remove duplicates</button>
+      <button class="btn ghost sm ${st.consume === '1' ? 'on' : ''}" data-act="consume" title="Remove each song from the queue after it plays">${st.consume === '1' ? ic('check','sm') : ''}Remove after play</button>
+      <button class="btn ghost sm" data-act="q-save">${ic('save','sm')}Save as playlist</button>
+      <button class="btn danger sm" data-act="q-clear">${ic('trash','sm')}Clear</button>
+    </div></div>
+    ${trackList(q, {type:'queue'}, {drag:true, empty:'The queue is empty. Play a playlist, album or song to fill it.'})}`;
+};
+
+// ---- Playlists
+VIEWS.playlists = async () => {
+  if (!S.playlists.length) await loadPlaylists();
+  const groups = new Map();
+  for (const p of S.playlists) { if (!groups.has(p.group)) groups.set(p.group, []); groups.get(p.group).push(p); }
+  return `<div class="vh"><div class="grow"><h1>Playlists</h1><div class="sub">${plural(S.playlists.length, 'playlist')}</div></div>
+    <div class="actions">${filterBox('.card', 'Find a playlist')}<button class="btn ghost sm" data-act="q-save">${ic('save','sm')}Save queue as playlist</button></div></div>
+    ${[...groups].map(([g, ps]) => `<div class="sect" data-sect><h2>${esc(g === 'Mix' ? 'Mixes' : g === 'Genre' ? 'Genres' : g === 'Artist' ? 'Artists' : g === 'Game' ? 'Game soundtracks' : g)} <small>${ps.length}</small></h2>
+      <div class="grid">${ps.map(p => {
+        const tracks = p.files.map(songOf);
+        return `<a class="card" href="${go('playlist', p.name)}" data-fk="${esc(fold(p.name))}">
+          <div class="card-art">${tracks.length ? art(tracks[0], 'md') : ph(p.title, 'md')}<button class="card-play" data-act="play-pl" data-name="${esc(p.name)}" title="Play">${ic('play')}</button></div>
+          <div class="card-t">${esc(p.title)}</div><div class="card-s">${plural(p.files.length, 'song')} · ${fmtLong(sum(tracks, t => t.dur))}</div></a>`;
+      }).join('')}</div></div>`).join('')}`;
+};
+VIEWS.playlist = async name => {
+  const [pairs] = await api([['listplaylist', name]]);
+  const tracks = pairs.filter(p => p[0] === 'file').map(p => songOf(p[1]));
+  const meta = plMeta(name), missing = tracks.filter(t => t.missing).length;
+  return `${crumbs([['Playlists', '#playlists'], [meta.group]])}
+    <div class="hero">${mosaic(tracks)}<div class="grow"><div class="kind">Playlist · ${esc(meta.group)}</div><h1>${esc(meta.title)}</h1>
+      <div class="meta">${plural(tracks.length, 'song')} · ${fmtLong(sum(tracks, t => t.dur))}${missing ? ` · <span style="color:var(--danger)">${missing} missing</span>` : ''}</div>
+      <div class="actions">
+        <button class="btn" data-act="play-list" data-l="0">${ic('play','sm')}Play</button>
+        <button class="btn ghost" data-act="shuffle-list" data-l="0">${ic('shuffle','sm')}Shuffle</button>
+        <button class="btn ghost" data-act="add-list" data-l="0">${ic('add','sm')}Add to queue</button>
+        <button class="icon-btn" data-act="pl-menu" data-name="${esc(name)}" title="More">${ic('more')}</button>
+      </div></div></div>
+    <div class="toolbar">${filterBox('.tr', 'Filter this playlist')}<span class="muted" style="font-size:12.5px">Drag ⠿ to reorder · tick songs for bulk actions in the ⋯ menu</span></div>
+    ${trackList(tracks, {type:'playlist', name}, {drag:true, empty:'This playlist is empty. Add songs from any list with ⋯ → Add to playlist.'})}`;
+};
+
+// ---- Library: artists / albums / genres / folders
+VIEWS.artists = async () => {
+  return `<div class="vh"><div class="grow"><h1>Library</h1></div></div>${libTabs('artists')}
+    <div class="toolbar">${filterBox('.card', 'Filter artists')}<span class="muted">${plural(L.artistList.length, 'artist')}</span></div>
+    <div class="grid">${L.artistList.map((a, i) => `<a class="card round" href="${go('artist', a.name)}" data-fk="${esc(fold(a.name))}">
+      <div class="card-art">${art(a.albums[0].songs[0], 'md')}<button class="card-play" data-act="play-artist" data-ar="${i}" title="Shuffle artist">${ic('shuffle')}</button></div>
+      <div class="card-t">${esc(a.name)}</div><div class="card-s">${plural(a.albums.length, 'album')} · ${plural(a.songs.length, 'song')}</div></a>`).join('')}</div>`;
+};
+VIEWS.artist = async name => {
+  const a = L.artists.get(name);
+  if (!a) return `<div class="empty">Artist not found.</div>`;
+  const songs = a.albums.flatMap(x => x.songs);
+  return `${crumbs([['Artists', '#artists']])}
+    <div class="hero">${art(a.albums[0].songs[0], 'lg')}<div><div class="kind">Artist</div><h1>${esc(a.name)}</h1>
+      <div class="meta">${plural(a.albums.length, 'album')} · ${plural(songs.length, 'song')} · ${fmtLong(sum(songs, s => s.dur))}</div>
+      <div class="actions"><button class="btn" data-act="shuffle-list" data-l="0">${ic('shuffle','sm')}Shuffle all</button>
+      <button class="btn ghost" data-act="play-list" data-l="0">${ic('play','sm')}Play all</button>
+      <button class="btn ghost" data-act="add-list" data-l="0">${ic('add','sm')}Add to queue</button>
+      <button class="btn ghost" data-act="pl-list" data-l="0">${ic('playlist','sm')}Add to playlist</button></div></div></div>
+    <div class="sect"><h2>Albums</h2><div class="grid">${a.albums.map(albumCard).join('')}</div></div>
+    <div class="sect"><h2>All songs <small>${songs.length}</small></h2><div class="toolbar">${filterBox('.tr', 'Filter songs')}</div>${trackList(songs, {type:'artist', name})}</div>`;
+};
+VIEWS.albums = async () => {
+  const sort = localStorage.albumSort || 'artist';
+  const list = [...L.albumList];
+  if (sort === 'title') list.sort((x, y) => fold(x.name).localeCompare(fold(y.name)));
+  if (sort === 'year') list.sort((x, y) => (y.date||'').localeCompare(x.date||''));
+  if (sort === 'added') list.sort((x, y) => y.added.localeCompare(x.added));
+  return `<div class="vh"><div class="grow"><h1>Library</h1></div></div>${libTabs('albums')}
+    <div class="toolbar">${filterBox('.card', 'Filter albums or artists')}
+      <select class="input" style="width:auto" data-act-change="album-sort">${[['artist','Sort: Artist'],['title','Sort: Title'],['year','Sort: Newest year'],['added','Sort: Recently added']].map(([v, n]) => `<option value="${v}"${v === sort ? ' selected' : ''}>${n}</option>`).join('')}</select>
+      <span class="muted">${plural(list.length, 'album')}</span></div>
+    <div class="grid">${list.map(albumCard).join('')}</div>`;
+};
+VIEWS.album = async (artist, name) => {
+  const a = L.albums.get(artist + '\u0001' + name);
+  if (!a) return `<div class="empty">Album not found.</div>`;
+  const fmtInfo = a.songs[0].format ? fmtAudio(a.songs[0].format, a.songs[0].file) : '';
+  return `${crumbs([['Albums', '#albums'], [a.artist, go('artist', a.artist)]])}
+    <div class="hero">${art(a.songs[0], 'lg')}<div><div class="kind">Album</div><h1>${esc(a.name)}</h1>
+      <div class="meta"><a href="${go('artist', a.artist)}">${esc(a.artist)}</a>${a.date ? ' · ' + esc(a.date) : ''} · ${plural(a.songs.length, 'song')} · ${fmtLong(a.dur)}${fmtInfo ? ' · ' + fmtInfo : ''}</div>
+      <div class="actions"><button class="btn" data-act="play-list" data-l="0">${ic('play','sm')}Play</button>
+      <button class="btn ghost" data-act="shuffle-list" data-l="0">${ic('shuffle','sm')}Shuffle</button>
+      <button class="btn ghost" data-act="next-list" data-l="0">${ic('next_up','sm')}Play next</button>
+      <button class="btn ghost" data-act="add-list" data-l="0">${ic('add','sm')}Add to queue</button>
+      <button class="btn ghost" data-act="pl-list" data-l="0">${ic('playlist','sm')}Add to playlist</button></div></div></div>
+    ${trackList(a.songs, {type:'album', name}, {numbers:true})}`;
+};
+VIEWS.genres = async () => `<div class="vh"><div class="grow"><h1>Library</h1></div></div>${libTabs('genres')}
+  <div class="chips">${L.genreList.map(g => `<a class="chip" href="${go('genre', g.name)}"><b>${esc(g.name)}</b>${g.songs.length}</a>`).join('')}</div>`;
+VIEWS.genre = async name => {
+  const g = L.genres.get(name);
+  if (!g) return `<div class="empty">Genre not found.</div>`;
+  const albums = L.albumList.filter(a => a.songs.some(s => (s.genre || 'Unknown') === name));
+  return `${crumbs([['Genres', '#genres']])}<div class="vh"><div class="grow"><h1>${esc(name)}</h1><div class="sub">${plural(g.songs.length, 'song')} · ${plural(albums.length, 'album')}</div></div>
+    <div class="actions"><button class="btn" data-act="shuffle-list" data-l="0">${ic('shuffle','sm')}Shuffle</button><button class="btn ghost" data-act="add-list" data-l="0">${ic('add','sm')}Add to queue</button><button class="btn ghost" data-act="pl-list" data-l="0">${ic('playlist','sm')}Add to playlist</button></div></div>
+    ${(registerList(g.songs, {type:'genre', name}), '')}
+    <div class="sect"><h2>Albums</h2><div class="grid">${albums.map(albumCard).join('')}</div></div>`;
+};
+VIEWS.folders = async (path = '') => {
+  const [pairs] = await api([path ? ['lsinfo', path] : ['lsinfo']]);
+  const items = group(pairs);
+  const dirs = items.filter(o => o._type === 'directory' && !hidden(o.directory));
+  const files = items.filter(o => o._type === 'file' && !hidden(o.file)).map(o => L.byFile.get(o.file) || songFrom(o));
+  const parts = path ? path.split('/') : [];
+  const trail = [['SD card', path ? go('folders') : null], ...parts.map((p, i) => [p, i < parts.length - 1 ? go('folders', parts.slice(0, i + 1).join('/')) : null])];
+  S.dirs = dirs.map(d => d.directory);
+  return `${path ? '' : `<div class="vh"><div class="grow"><h1>Library</h1></div></div>${libTabs('folders')}`}
+    ${crumbs(trail)}
+    ${path ? `<div class="vh"><div class="grow"><h1>${esc(parts[parts.length - 1])}</h1></div><div class="actions">
+      <button class="btn" data-act="play-dir" data-d="-1">${ic('play','sm')}Play folder</button><button class="btn ghost" data-act="shuffle-dir" data-d="-1">${ic('shuffle','sm')}Shuffle</button>
+      <button class="btn ghost" data-act="add-dir" data-d="-1">${ic('add','sm')}Add to queue</button><button class="btn ghost" data-act="pl-dir" data-d="-1">${ic('playlist','sm')}Add to playlist</button></div></div>` : ''}
+    <div>${dirs.map((d, i) => `<div class="dirrow"><a href="${go('folders', d.directory)}" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">${ic('folder')}<span class="n">${esc(d.directory.split('/').pop())}</span></a>
+      <button class="icon-btn" data-act="play-dir" data-d="${i}" title="Play">${ic('play')}</button><button class="icon-btn" data-act="dir-menu" data-d="${i}" title="More">${ic('more')}</button></div>`).join('')}</div>
+    ${files.length ? `<div class="sect">${trackList(files, {type:'folder', path})}</div>` : ''}${!dirs.length && !files.length ? '<div class="empty">Empty folder.</div>' : ''}`;
+};
+
+// ---- Search
+VIEWS.search = async (q = '') => {
+  S.q = q;
+  return `<div class="vh"><div class="grow"><h1>Search</h1></div></div>
+    <input class="input" id="bigSearch" value="${esc(q)}" placeholder="Songs, artists, albums, genres — accents optional (tuan → Tuấn)" autocomplete="off" spellcheck="false" style="font-size:16px;padding:12px 16px;max-width:640px">
+    <div id="results">${searchResults(q)}</div>`;
+};
+function searchResults(q) {
+  const toks = fold(q.trim()).split(/\s+/).filter(Boolean);
+  S.lists = []; S.sel.clear(); updateSelBar();
+  if (!toks.length) return `<div class="empty">Start typing to search ${plural(L.songs.length, 'song')}.</div>`;
+  const hit = h => toks.every(t => h.includes(t));
+  const artists = L.artistList.filter(a => hit(fold(a.name))).slice(0, 12);
+  const albums = L.albumList.filter(a => hit(fold(a.name + ' ' + a.artist))).slice(0, 18);
+  const songs = L.songs.filter(s => hit(s.hay)).slice(0, 300);
+  if (!artists.length && !albums.length && !songs.length) return `<div class="empty">No matches for “${esc(q)}”.</div>`;
+  return `${artists.length ? `<div class="sect"><h2>Artists</h2><div class="grid">${artists.map(a => `<a class="card round" href="${go('artist', a.name)}"><div class="card-art">${art(a.albums[0].songs[0], 'md')}</div><div class="card-t">${esc(a.name)}</div><div class="card-s">${plural(a.songs.length, 'song')}</div></a>`).join('')}</div></div>` : ''}
+    ${albums.length ? `<div class="sect"><h2>Albums</h2><div class="grid">${albums.map(albumCard).join('')}</div></div>` : ''}
+    ${songs.length ? `<div class="sect"><h2>Songs <small>${songs.length === 300 ? '300+' : songs.length}</small>
+      <span class="actions" style="margin-left:auto"><button class="btn sm" data-act="play-list" data-l="0">${ic('play','sm')}Play all</button><button class="btn ghost sm" data-act="add-list" data-l="0">${ic('add','sm')}Add all</button><button class="btn ghost sm" data-act="pl-list" data-l="0">${ic('playlist','sm')}Add all to playlist</button></span></h2>
+      ${trackList(songs, {type:'search', q})}</div>` : ''}`;
+}
+function onSearchInput(q) {
+  if (route()[0] !== 'search') { location.hash = go('search', q); return; }
+  history.replaceState(null, '', go('search', q));
+  S.q = q;
+  const r = $('#results'); if (r) { r.innerHTML = searchResults(q); markPlaying(); }
+  const side = $('#sideSearch'), big = $('#bigSearch');
+  if (side && document.activeElement !== side) side.value = q;
+  if (big && document.activeElement !== big) big.value = q;
+}
+
+// ---- Connect (Android app): find the Poly at home or on its own hotspot
+VIEWS.connect = async () => {
+  const saved = JSON.parse(localStorage.poly || 'null');
+  return `<div class="vh"><div class="grow"><h1>Connect to your Poly</h1><div class="sub">${S.info.mpd ? `Connected to <b>${esc(S.info.name)}</b> (${esc(S.info.mpd)})` : 'Not connected'}</div></div></div>
+    <div class="panel"><h3>Found nearby</h3>
+      ${S.searching ? '<div class="row muted"><span class="spin"></span>Searching your Wi-Fi…</div>' : S.found && S.found.length ? `<div class="devs">${S.found.map((d, i) => `<button class="dev" data-act="use-dev" data-i="${i}">${ic(d.via === 'hotspot' ? 'now' : 'album')}<span><b>${esc(d.name)}</b><small>${esc(d.host)} · ${d.via === 'hotspot' ? 'Poly hotspot' : 'home Wi-Fi'}</small></span></button>`).join('')}</div>` : `<div class="muted">${S.found ? 'No Poly found on this Wi-Fi.' : ''}</div>`}
+      <div class="row" style="margin-top:12px"><button class="btn" data-act="discover">${ic('refresh','sm')}Search again</button></div></div>
+    <div class="panel"><h3>Enter the address yourself</h3>
+      <div class="row" style="flex-wrap:nowrap"><input class="input" id="manualHost" placeholder="e.g. 192.168.1.50" value="${esc(saved ? saved.host : '')}" inputmode="decimal" autocomplete="off"><button class="btn" data-act="connect-manual">Connect</button></div></div>
+    <div class="panel"><h3>Can't find it?</h3><ul class="steps">
+      <li><b>At home:</b> your phone and the Poly must be on the same Wi-Fi network.</li>
+      <li><b>Outside:</b> switch the Poly to <b>Hotspot mode</b> in GoFigure before you leave, then join the Poly's Wi-Fi on your phone. No internet is needed.</li>
+      <li>If Android says the Wi-Fi “has no internet”, choose <b>Keep connection</b>.</li></ul></div>`;
+};
+async function useHost(d) {
+  const port = +d.port || 6600;
+  await Mpd.setHost({host:d.host, port});
+  localStorage.poly = JSON.stringify({name:d.name || d.host, host:d.host, port});
+  S.info = {name:d.name || d.host, mpd:`${d.host}:${port}`};
+  return true;
+}
+async function nativeConnect() {
+  const saved = JSON.parse(localStorage.poly || 'null');
+  if (saved && (await Mpd.probe({host:saved.host, port:saved.port}).catch(() => ({}))).ok) return useHost(saved);
+  await discover();
+  const pick = S.found.find(d => saved && d.name === saved.name) || S.found[0];
+  return pick ? useHost(pick) : false;
+}
+async function discover() {
+  S.searching = true; if (route()[0] === 'connect') render(true);
+  try { S.found = (await Mpd.discover({timeout:3000})).devices || []; } catch { S.found = []; }
+  S.searching = false; if (route()[0] === 'connect') render(true);
+}
+
+// ---- Settings
+VIEWS.settings = async () => {
+  const [stats, outs, rg] = await api([['stats'], ['outputs'], ['replay_gain_status']]);
+  const s = obj(stats), st = S.status;
+  const outputs = group(outs.map(([k, v]) => k === 'outputid' ? ['directory', v] : [k, v]));
+  if (!S.info.mpd && !NATIVE) S.info = await fetch('/api/info').then(r => r.json()).catch(() => ({}));
+  return `<div class="vh"><div class="grow"><h1>Settings</h1><div class="sub">Your Poly “${esc(S.info.name || 'Moly')}” at <code>${esc(S.info.mpd || '')}</code></div></div></div>
+    <div class="panel"><h3>SD card library</h3>
+      <dl class="kv"><dt>Songs</dt><dd>${(+s.songs).toLocaleString()} <span class="muted">(${L.songs.length.toLocaleString()} shown — files in hidden folders like the Mac Trash are skipped)</span></dd>
+      <dt>Albums / artists</dt><dd>${L.albumList.length} / ${L.artistList.length}</dd>
+      <dt>Total length</dt><dd>${fmtLong(+s.db_playtime)}</dd>
+      <dt>Last scan</dt><dd>${new Date(+s.db_update * 1000).toLocaleString()}</dd></dl>
+      <div class="row" style="margin-top:14px">${st.updating_db ? '<span class="chip hi"><span class="spin"></span>Scanning…</span>' : `<button class="btn" data-act="rescan">${ic('refresh','sm')}Scan for new music</button><button class="btn ghost" data-act="fullrescan" title="Re-reads every file's tags — slower">Full rescan</button>`}</div>
+      <p class="muted" style="margin:12px 0 0;font-size:12.5px">Use this after copying music to the card — it replaces GoFigure's “Update SD card”, and you can watch it finish here.</p></div>
+    <div class="panel"><h3>Output</h3>${outputs.map(o => `<div class="row"><b>${esc(o.outputname)}</b><span class="muted">${esc(o.plugin || '')}${o.attribute ? ' · ' + esc(o.attribute) : ''}</span>
+      <button class="btn sm ${o.outputenabled === '1' ? '' : 'ghost'}" data-act="output" data-id="${esc(o.directory)}" style="margin-left:auto">${o.outputenabled === '1' ? 'Enabled' : 'Disabled'}</button></div>`).join('')}
+      <p class="muted" style="margin:12px 0 0;font-size:12.5px">DSD / bit-perfect mode is a Poly setting, so keep using GoFigure for that one. Volume is controlled on the Mojo 2.</p></div>
+    <div class="panel"><h3>Playback</h3><div class="row">
+      <label class="row">Crossfade <select class="input" style="width:auto" data-act-change="crossfade">${[0,2,4,6,8].map(n => `<option value="${n}"${+(st.xfade||0) === n ? ' selected' : ''}>${n ? n + ' s' : 'Off'}</option>`).join('')}</select></label>
+      <label class="row">Replay gain <select class="input" style="width:auto" data-act-change="replaygain">${['off','track','album','auto'].map(m => `<option${obj(rg).replay_gain_mode === m ? ' selected' : ''}>${m}</option>`).join('')}</select></label></div>
+      <p class="muted" style="margin:12px 0 0;font-size:12.5px">Leave both off for bit-perfect playback.</p></div>
+    ${NATIVE ? `<div class="panel"><h3>Poly connection</h3><div class="row"><span>${esc(S.info.name)} · <code>${esc(S.info.mpd)}</code></span><a class="btn ghost sm" href="#connect" style="margin-left:auto">Change…</a></div></div>` : `<div class="panel"><h3>Use it on your phone</h3>${S.info.lan_url ? `Open <code>${esc(S.info.lan_url)}</code> on any device on the same Wi-Fi, then “Add to Home Screen”.` : 'Run the bridge with your Mac on Wi-Fi to get a phone link.'}</div>`}`;
+};
+
+// ============================================================ player bar
+function fmtAudio(audio, file) {
+  const ext = (file || '').split('.').pop().toUpperCase();
+  if (/^dsd/i.test(audio)) return `${audio.split(':')[0].toUpperCase()}`;
+  const [rate, bits] = audio.split(':');
+  if (!rate || isNaN(+rate)) return ext;
+  return `${ext} ${bits && !isNaN(+bits) ? bits + '-bit / ' : ''}${(+rate / 1000).toString().replace(/\.0$/, '')} kHz`;
+}
+function formatChips() {
+  const st = S.status, c = S.current; if (!c) return [];
+  const out = [fmtAudio(st.audio || c.format || '', c.file)];
+  if (st.bitrate && +st.bitrate) out.push(`${(+st.bitrate).toLocaleString()} kbps`);
+  return out.filter(Boolean);
+}
+const elapsed = () => { const st = S.status; let e = parseFloat(st.elapsed || 0); if (st.state === 'play') e += (performance.now() - S.statusAt) / 1000; return e; };
+const duration = () => parseFloat(S.status.duration || (S.status.time || '').split(':')[1] || (S.current && S.current.dur) || 0);
+let lastArtFile = null;
+function updatePlayer() {
+  const st = S.status, c = S.current;
+  $('#bPlay').innerHTML = ic(st.state === 'play' ? 'pause' : 'play');
+  $('#bRandom').innerHTML = ic('shuffle'); $('#bRandom').classList.toggle('on', st.random === '1');
+  const rep = st.repeat === '1', one = rep && st.single === '1';
+  $('#bRepeat').innerHTML = ic('repeat') + (one ? '<span class="rep1">1</span>' : ''); $('#bRepeat').classList.toggle('on', rep);
+  $('#bRepeat').title = one ? 'Repeating one song' : rep ? 'Repeating queue' : 'Repeat off';
+  $('#pTitle').textContent = c ? c.title : 'Nothing playing';
+  $('#pSub').textContent = c ? `${c.artist} — ${c.album}` : 'Pick a playlist to start';
+  if ((c && c.file) !== lastArtFile) { lastArtFile = c && c.file; $('#pArt').innerHTML = art(c); }
+  const fc = formatChips(); $('#pFmt').hidden = !fc.length; $('#pFmt').textContent = fc[0] || '';
+  document.title = c && st.state === 'play' ? `${c.title} · ${c.artist}` : 'Molly Remote';
+  tick();
+}
+function tick() {
+  const seek = $('#seek'), d = duration(), e = Math.min(elapsed(), d || Infinity);
+  seek.disabled = !d;   // e.g. untagged live recordings the Poly can't measure
+  if (!S.seeking) { seek.max = Math.max(1, Math.floor(d)); seek.value = d ? Math.floor(e) : 0; }
+  const p = d ? (S.seeking ? seek.value / d : e / d) * 100 : 0;
+  seek.style.setProperty('--p', p + '%');
+  $('#miniProg').style.width = p + '%';
+  $('#tEl').textContent = fmt(S.seeking ? +seek.value : e); $('#tDur').textContent = d ? fmt(d) : '--:--';
+}
+setInterval(() => { if (S.status.state === 'play') tick(); }, 500);
+
+// ============================================================ nav
+const NAV = [['now','now','Now Playing'],['queue','queue','Queue'],null,['playlists','playlist','Playlists'],['artists','artist','Artists'],['albums','album','Albums'],['genres','genre','Genres'],['folders','folder','Folders'],'Device',['settings','settings','Settings']];
+$('#nav').innerHTML = NAV.map(n => n === null ? '<div class="nav-h">Library</div>' : typeof n === 'string' ? `<div class="nav-h">${n}</div>` :
+  `<a href="#${n[0]}" data-nav="${n[0]}">${ic(n[1])}${n[2]}${n[0] === 'queue' ? '<span class="badge" id="qCount"></span>' : ''}</a>`).join('');
+$('#tabbar').innerHTML = [['now','now','Playing'],['queue','queue','Queue'],['playlists','playlist','Playlists'],['artists','album','Library'],['search','search','Search'],['settings','settings','More']]
+  .map(([h, i, n]) => `<a href="#${h}" data-nav="${h}">${ic(i)}${n}</a>`).join('');
+$('#bQueue').innerHTML = ic('queue');
+const NAV_ALIAS = {playlist:'playlists', artist:'artists', album:'albums', genre:'genres', connect:'settings'};
+function setActiveNav(view) {
+  const v = NAV_ALIAS[view] || view;
+  $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === v || (a.closest('#tabbar') && a.dataset.nav === 'artists' && ['albums','genres','folders'].includes(v))));
+}
+
+// ============================================================ menus, modals, toasts, selection
+function toast(html, err = false) {
+  const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.innerHTML = html;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), err ? 5000 : 2600);
+}
+function openMenu(anchor, items, header = '') {
+  const m = $('#menu'); S.menu = items;
+  m.innerHTML = (header ? `<div class="mh">${esc(header)}</div>` : '') + items.map((it, i) => it === '-' ? '<hr>' : `<button data-act="mi" data-i="${i}" class="${it.danger ? 'danger' : ''}">${ic(it.icon || 'dot')}${esc(it.label)}</button>`).join('');
+  m.hidden = false;
+  if (innerWidth > 820) {
+    const r = anchor.getBoundingClientRect(), mw = m.offsetWidth, mh = m.offsetHeight;
+    m.style.left = Math.max(8, Math.min(r.right - mw, innerWidth - mw - 8)) + 'px';
+    m.style.top = (r.bottom + mh + 8 > innerHeight ? Math.max(8, r.top - mh - 4) : r.bottom + 4) + 'px';
+  }
+}
+function closeMenu() { $('#menu').hidden = true; }
+function modal(inner) { const m = $('#modal'); m.innerHTML = `<div class="modal-card">${inner}</div>`; m.hidden = false; return m; }
+function closeModal() { const m = $('#modal'); m.hidden = true; m.innerHTML = ''; m.onclick = null; }
+function promptText(title, value = '', okLabel = 'Save') {
+  return new Promise(res => {
+    const m = modal(`<h3>${esc(title)}</h3><input class="input" id="mIn" value="${esc(value)}"><div class="modal-btns"><button class="btn ghost" data-m="cancel">Cancel</button><button class="btn" data-m="ok">${esc(okLabel)}</button></div>`);
+    const inp = $('#mIn'); inp.focus(); inp.select();
+    const done = v => { closeModal(); res(v ? v.replace(/[\/\n\r]/g, '-').trim() || null : null); };
+    m.onclick = e => { const b = e.target.closest('[data-m]'); if (b) done(b.dataset.m === 'ok' ? inp.value : null); else if (e.target === m) done(null); };
+    inp.onkeydown = e => { if (e.key === 'Enter') done(inp.value); if (e.key === 'Escape') done(null); };
+  });
+}
+function confirmBox(text, okLabel = 'Delete') {
+  return new Promise(res => {
+    const m = modal(`<h3>${esc(text)}</h3><div class="modal-btns"><button class="btn ghost" data-m="cancel">Cancel</button><button class="btn" style="background:var(--danger)" data-m="ok">${esc(okLabel)}</button></div>`);
+    m.onclick = e => { const b = e.target.closest('[data-m]'); if (b || e.target === m) { closeModal(); res(!!b && b.dataset.m === 'ok'); } };
+  });
+}
+async function pickPlaylist(n) {
+  if (!S.playlists.length) await loadPlaylists();
+  return new Promise(res => {
+    const list = [...S.playlists].sort((a, b) => (a.order === 0 ? -1 : 0) - (b.order === 0 ? -1 : 0) || a.order - b.order || a.title.localeCompare(b.title));
+    const m = modal(`<h3>Add ${plural(n, 'song')} to…</h3>
+      <div class="row" style="flex-wrap:nowrap"><input class="input" id="mNew" placeholder="New playlist name"><button class="btn" data-m="new">Create</button></div>
+      <input class="input" id="mFind" placeholder="Find a playlist">
+      <div class="pick">${list.map((p, i) => `<button data-m="pick" data-i="${i}" data-fk="${esc(fold(p.name))}">${ic('playlist')}<span>${esc(p.title)} <span class="muted" style="font-size:12px">${esc(p.group)}</span></span><small>${p.files.length}</small></button>`).join('')}</div>
+      <div class="modal-btns"><button class="btn ghost" data-m="cancel">Cancel</button></div>`);
+    const done = v => { closeModal(); res(v); };
+    $('#mFind').oninput = e => { const q = fold(e.target.value); $$('.pick button', m).forEach(b => b.hidden = q && !b.dataset.fk.includes(q)); };
+    $('#mNew').onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) done(e.target.value.replace(/[\/\n\r]/g, '-').trim()); };
+    m.onclick = e => {
+      const b = e.target.closest('[data-m]');
+      if (!b) { if (e.target === m) done(null); return; }
+      if (b.dataset.m === 'pick') done(list[+b.dataset.i].name);
+      else if (b.dataset.m === 'new') { const v = $('#mNew').value.replace(/[\/\n\r]/g, '-').trim(); if (v) done(v); else $('#mNew').focus(); }
+      else done(null);
+    };
+    $('#mFind').focus();
+  });
+}
+function selTracks() {
+  const out = []; let l = null;
+  for (const k of S.sel) { const [li, i] = k.split(':').map(Number); l = li; out.push({l:li, i, t:S.lists[li].tracks[i]}); }
+  out.sort((a, b) => a.l - b.l || a.i - b.i);
+  return {items:out, ctx:l != null ? S.lists[l].ctx : null};
+}
+function updateSelBar() {
+  const bar = $('#selbar'), n = S.sel.size;
+  $('#view') && $('#view').classList.toggle('selecting', n > 0);
+  if (!n) { bar.hidden = true; return; }
+  const {ctx} = selTracks();
+  bar.innerHTML = `<b>${n} selected</b>
+    <button class="btn sm" data-act="sel-play">${ic('play','sm')}Play</button>
+    <button class="btn ghost sm" data-act="sel-next">${ic('next_up','sm')}Play next</button>
+    ${ctx && ctx.type === 'queue' ? '' : `<button class="btn ghost sm" data-act="sel-add">${ic('add','sm')}Queue</button>`}
+    <button class="btn ghost sm" data-act="sel-pl">${ic('playlist','sm')}Playlist</button>
+    ${ctx && (ctx.type === 'playlist' || ctx.type === 'queue') ? `<button class="btn danger sm" data-act="sel-remove">${ic('trash','sm')}Remove</button>` : ''}
+    <button class="icon-btn" data-act="sel-clear" title="Clear selection">${ic('close')}</button>`;
+  bar.hidden = false;
+}
+
+function trackMenu(anchor, l, i) {
+  const {tracks, ctx} = S.lists[l], t = tracks[i];
+  const album = L.albums.get(t.albumArtist + '\u0001' + t.album);
+  const items = [
+    {label:'Play now', icon:'play', fn:() => ctx.type === 'queue' ? api([['playid', t.id]]) : playNow(t)},
+    {label:'Play next', icon:'next_up', fn:() => ctx.type === 'queue' ? api([['moveid', t.id, Math.max(0, +S.status.song + (t.pos > +S.status.song ? 1 : 0))]]).then(() => toast('Moved to play next')) : playNext([t])},
+  ];
+  if (ctx.type !== 'queue') items.push({label:'Add to queue', icon:'add', fn:() => addToQueue([t])});
+  items.push({label:'Add to playlist…', icon:'playlist', fn:() => addToPlaylist([t])}, '-');
+  if (album) items.push({label:'Go to album', icon:'album', fn:() => location.hash = go('album', album.artist, album.name)});
+  if (L.artists.has(t.albumArtist)) items.push({label:'Go to artist', icon:'artist', fn:() => location.hash = go('artist', t.albumArtist)});
+  items.push({label:'Show in folder', icon:'folder', fn:() => location.hash = go('folders', dirOf(t.file))});
+  if (ctx.type === 'playlist' || ctx.type === 'queue') {
+    const mv = to => ctx.type === 'queue' ? api([['moveid', t.id, to]]) : api([['playlistmove', ctx.name, i, to]]);
+    const last = (ctx.type === 'queue' ? S.queue.length : tracks.length) - 1, here = ctx.type === 'queue' ? t.pos : i;
+    if (here > 0) items.push({label:'Move up', icon:'next_up', fn:() => mv(here - 1)}, {label:'Move to top', icon:'next_up', fn:() => mv(0)});
+    if (here < last) items.push({label:'Move down', icon:'queue', fn:() => mv(here + 1)}, {label:'Move to bottom', icon:'queue', fn:() => mv(last)});
+  }
+  if (ctx.type === 'playlist') items.push('-', {label:'Remove from this playlist', icon:'trash', danger:true, fn:async () => { await api([['playlistdelete', ctx.name, i]]); toast('Removed from playlist'); }});
+  if (ctx.type === 'queue') items.push('-', {label:'Remove from queue', icon:'trash', danger:true, fn:() => api([['deleteid', t.id]])});
+  openMenu(anchor, items, `${t.title} — ${t.artist}`);
+}
+async function listTracksOfDir(dir) { return L.songs.filter(s => s.file.startsWith(dir + '/')).sort((a, b) => a.file.localeCompare(b.file, undefined, {numeric:true})); }
+const curDir = el => +el.dataset.d < 0 ? route().slice(1).join('/') : S.dirs[+el.dataset.d];
+
+// ============================================================ actions
+const ACT = {
+  toggle: () => S.status.state === 'play' ? api([['pause', 1]]) : S.queue.length || S.status.playlistlength !== '0' ? api([['play']]) : toast('Queue is empty — pick something to play'),
+  prev: () => api([['previous']]), next: () => api([['next']]),
+  random: () => api([['random', S.status.random === '1' ? 0 : 1]]),
+  repeat: () => { const r = S.status.repeat === '1', s = S.status.single === '1'; return api(!r ? [['repeat', 1], ['single', 0]] : !s ? [['single', 1]] : [['repeat', 0], ['single', 0]]); },
+  consume: () => api([['consume', S.status.consume === '1' ? 0 : 1]]),
+  menu: el => { const row = el.closest('.tr'); trackMenu(el, +row.dataset.l, +row.dataset.i); },
+  'track-menu-current': el => { if (!S.current) return; const l = registerList([S.current], {type:'current'}); trackMenu(el, l, 0); },
+  mi: el => { const it = S.menu[+el.dataset.i]; closeMenu(); return it && it.fn(); },
+  'play-list': el => playContext(+el.dataset.l, 0),
+  'shuffle-list': el => playContext(+el.dataset.l, 0, true),
+  'next-list': el => playNext(S.lists[+el.dataset.l].tracks),
+  'add-list': el => addToQueue(S.lists[+el.dataset.l].tracks),
+  'pl-list': el => addToPlaylist(S.lists[+el.dataset.l].tracks),
+  'play-album': el => playTracks(L.albumList[+el.dataset.ai].songs),
+  'play-artist': el => playTracks(L.artistList[+el.dataset.ar].songs, 0, true),
+  'play-pl': async el => { const p = S.playlists.find(x => x.name === el.dataset.name); await api([['clear'], ['load', el.dataset.name], ['random', 0], ['play', 0]]); toast(`Playing “${esc(p ? p.title : el.dataset.name)}”`); },
+  'play-dir': async el => playTracks(await listTracksOfDir(curDir(el))),
+  'shuffle-dir': async el => playTracks(await listTracksOfDir(curDir(el)), 0, true),
+  'add-dir': async el => addToQueue(await listTracksOfDir(curDir(el))),
+  'pl-dir': async el => addToPlaylist(await listTracksOfDir(curDir(el))),
+  'dir-menu': el => { const d = curDir(el); openMenu(el, [
+    {label:'Play', icon:'play', fn:async () => playTracks(await listTracksOfDir(d))},
+    {label:'Shuffle', icon:'shuffle', fn:async () => playTracks(await listTracksOfDir(d), 0, true)},
+    {label:'Play next', icon:'next_up', fn:async () => playNext(await listTracksOfDir(d))},
+    {label:'Add to queue', icon:'add', fn:async () => addToQueue(await listTracksOfDir(d))},
+    {label:'Add to playlist…', icon:'playlist', fn:async () => addToPlaylist(await listTracksOfDir(d))}], d.split('/').pop()); },
+  'pl-menu': el => { const name = el.dataset.name, l = S.lists[0]; openMenu(el, [
+    {label:'Play next', icon:'next_up', fn:() => playNext(l.tracks)},
+    {label:'Add to another playlist…', icon:'playlist', fn:() => addToPlaylist(l.tracks)},
+    {label:'Rename…', icon:'edit', fn:async () => { const n = await promptText('Rename playlist', name, 'Rename'); if (n && n !== name) { await api([['rename', name, n]]); location.hash = go('playlist', n); toast('Renamed'); } }},
+    {label:'Duplicate…', icon:'copy', fn:async () => { const n = await promptText('Name for the copy', plMeta(name).title + ' (copy)', 'Create'); if (n) { await api(l.tracks.filter(t => !t.missing).map(t => ['playlistadd', n, t.file])); location.hash = go('playlist', n); } }},
+    {label:'Remove duplicates', icon:'broom', fn:async () => { const seen = new Set(), dup = []; l.tracks.forEach((t, i) => seen.has(t.file) ? dup.push(i) : seen.add(t.file)); if (!dup.length) return toast('No duplicates'); await api(dup.reverse().map(i => ['playlistdelete', name, i])); toast(`Removed ${plural(dup.length, 'duplicate')}`); }},
+    {label:'Remove missing songs', icon:'broom', fn:async () => { const miss = l.tracks.map((t, i) => t.missing ? i : -1).filter(i => i >= 0); if (!miss.length) return toast('Nothing missing'); await api(miss.reverse().map(i => ['playlistdelete', name, i])); toast(`Removed ${plural(miss.length, 'missing song')}`); }},
+    {label:'Sort by artist & album', icon:'album', fn:async () => { const sorted = [...l.tracks].filter(t => !t.missing).sort((a, b) => fold(a.albumArtist).localeCompare(fold(b.albumArtist)) || (a.date||'').localeCompare(b.date||'') || a.album.localeCompare(b.album) || a.disc - b.disc || a.track - b.track); await api([['playlistclear', name], ...sorted.map(t => ['playlistadd', name, t.file])]); toast('Sorted'); }},
+    '-',
+    {label:'Delete playlist', icon:'trash', danger:true, fn:async () => { if (await confirmBox(`Delete “${plMeta(name).title}”? Songs stay on the SD card.`)) { await api([['rm', name]]); location.hash = '#playlists'; toast('Playlist deleted'); } }},
+  ], plMeta(name).title); },
+  'q-clear': async () => { if (!S.queue.length || await confirmBox('Clear the whole queue?', 'Clear')) await api([['clear']]); },
+  'q-shuffle': () => api([['shuffle']]).then(() => toast('Queue shuffled')),
+  'q-dedupe': async () => { const seen = new Set(), dup = []; S.queue.forEach(t => seen.has(t.file) ? dup.push(t.id) : seen.add(t.file)); if (!dup.length) return toast('No duplicates in the queue'); await api(dup.map(id => ['deleteid', id])); toast(`Removed ${plural(dup.length, 'duplicate')}`); },
+  'q-save': async () => { if (!S.queue.length && !(await loadQueue(), S.queue.length)) return toast('Queue is empty', true); const n = await promptText('Save queue as playlist', '', 'Save'); if (n) { await api([['save', n]]); toast(`Saved “${esc(n)}”`); } },
+  'sel-clear': () => { S.sel.clear(); $$('[data-sel]').forEach(c => c.checked = false); $$('.tr.sel').forEach(r => r.classList.remove('sel')); updateSelBar(); },
+  'sel-play': () => { const {items} = selTracks(); return playTracks(items.map(x => x.t)).then(ACT['sel-clear']); },
+  'sel-next': () => { const {items, ctx} = selTracks(); return (ctx.type === 'queue' ? api(items.reverse().map(x => ['moveid', x.t.id, Math.max(0, +S.status.song + (x.t.pos > +S.status.song ? 1 : 0))])) : playNext(items.map(x => x.t))).then(ACT['sel-clear']); },
+  'sel-add': () => addToQueue(selTracks().items.map(x => x.t)).then(ACT['sel-clear']),
+  'sel-pl': () => addToPlaylist(selTracks().items.map(x => x.t)).then(ACT['sel-clear']),
+  'sel-remove': async () => {
+    const {items, ctx} = selTracks();
+    if (ctx.type === 'queue') await api(items.map(x => ['deleteid', x.t.id]));
+    else await api(items.map(x => x.i).sort((a, b) => b - a).map(i => ['playlistdelete', ctx.name, i]));
+    toast(`Removed ${plural(items.length, 'song')}`); ACT['sel-clear']();
+  },
+  discover: () => discover(),
+  'use-dev': async el => { await useHost(S.found[+el.dataset.i]); await boot(); location.hash = '#playlists'; },
+  'connect-manual': async () => {
+    const host = $('#manualHost').value.trim(); if (!host) return;
+    const p = await Mpd.probe({host, port:6600});
+    if (!p.ok) return toast(`No Poly answering at ${esc(host)}`, true);
+    await useHost({name:host, host, port:6600}); await boot(); location.hash = '#playlists';
+  },
+  rescan: () => api([['update']]).then(() => { toast('Scanning the SD card…'); $('#scan').hidden = false; }),
+  fullrescan: () => api([['rescan']]).then(() => { toast('Full rescan started…'); $('#scan').hidden = false; }),
+  output: el => api([['toggleoutput', el.dataset.id]]).then(() => render(true)),
+};
+const CHANGE = {
+  'album-sort': el => { localStorage.albumSort = el.value; render(); },
+  crossfade: el => api([['crossfade', el.value]]),
+  replaygain: el => api([['replay_gain_mode', el.value]]),
+};
+
+document.addEventListener('click', async e => {
+  const a = e.target.closest('[data-act]');
+  if (!e.target.closest('#menu') && !(a && a.dataset.act === 'menu')) closeMenu();
+  try {
+    if (a && ACT[a.dataset.act]) { e.preventDefault(); e.stopPropagation(); return await ACT[a.dataset.act](a, e); }
+    const row = e.target.closest('.tr');
+    if (row && !e.target.closest('input,a,.drag,.ck')) return await playContext(+row.dataset.l, +row.dataset.i);
+  } catch (err) { toast(esc(err.message), true); }
+});
+document.addEventListener('change', async e => {
+  const el = e.target;
+  if (el.matches('[data-sel]')) {
+    const row = el.closest('.tr'), k = row.dataset.l + ':' + row.dataset.i;
+    el.checked ? S.sel.add(k) : S.sel.delete(k); row.classList.toggle('sel', el.checked); updateSelBar();
+  } else if (el.dataset.actChange && CHANGE[el.dataset.actChange]) {
+    try { await CHANGE[el.dataset.actChange](el); } catch (err) { toast(esc(err.message), true); }
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'sideSearch' || e.target.id === 'bigSearch') onSearchInput(e.target.value);
+});
+$('#seek').addEventListener('input', () => { S.seeking = true; tick(); });
+$('#seek').addEventListener('change', async e => { S.seeking = false; try { await api([['seekcur', e.target.value]]); } catch (err) { toast(esc(err.message), true); } });
+
+// drag to reorder (queue + playlists)
+document.addEventListener('dragstart', e => {
+  const row = e.target.closest && e.target.closest('.tr[draggable="true"]');
+  if (!row) return;
+  if (S.filtering) { e.preventDefault(); return toast('Clear the filter to reorder'); }
+  S.drag = {l:+row.dataset.l, from:+row.dataset.i};
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
+  row.classList.add('dragging');
+});
+document.addEventListener('dragover', e => {
+  const row = e.target.closest && e.target.closest('.tr');
+  if (!S.drag || !row || +row.dataset.l !== S.drag.l) return;
+  e.preventDefault();
+  $$('.drop-above,.drop-below').forEach(r => r.classList.remove('drop-above', 'drop-below'));
+  const r = row.getBoundingClientRect();
+  row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-above' : 'drop-below');
+});
+document.addEventListener('drop', async e => {
+  const row = e.target.closest && e.target.closest('.tr');
+  if (!S.drag || !row) return;
+  e.preventDefault();
+  const below = row.classList.contains('drop-below');
+  let to = +row.dataset.i + (below ? 1 : 0);
+  const {from, l} = S.drag; if (from < to) to--;
+  S.drag = null; $$('.dragging,.drop-above,.drop-below').forEach(r => r.classList.remove('dragging', 'drop-above', 'drop-below'));
+  if (to === from) return;
+  const {ctx, tracks} = S.lists[l];
+  try { ctx.type === 'queue' ? await api([['move', tracks[from].pos, tracks[to].pos]]) : await api([['playlistmove', ctx.name, from, to]]); }
+  catch (err) { toast(esc(err.message), true); }
+});
+document.addEventListener('dragend', () => { S.drag = null; $$('.dragging,.drop-above,.drop-below').forEach(r => r.classList.remove('dragging', 'drop-above', 'drop-below')); });
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (!$('#modal').hidden) { if (e.key === 'Escape') { $('#modal [data-m="cancel"]')?.click(); } return; }
+  if (e.key === ' ') { e.preventDefault(); ACT.toggle(); }
+  else if (e.key === 'ArrowRight' && (e.metaKey || e.ctrlKey || e.shiftKey)) ACT.next();
+  else if (e.key === 'ArrowLeft' && (e.metaKey || e.ctrlKey || e.shiftKey)) ACT.prev();
+  else if (e.key === '/') { e.preventDefault(); const s = innerWidth > 820 ? $('#sideSearch') : null; s ? s.focus() : (location.hash = '#search'); }
+  else if (e.key === 'Escape') { closeMenu(); ACT['sel-clear'](); }
+});
+
+// ============================================================ live updates
+function setConn(ok, err) {
+  if (S.conn === ok) return;
+  S.conn = ok;
+  $('#connDot').className = 'dot ' + (ok ? 'on' : 'off');
+  $('#connLabel').textContent = ok ? (S.info.name || 'Moly') + ' connected' : 'Poly offline';
+  $('#banner').innerHTML = ok ? '' : `<div class="banner"><b>Can't reach your Poly.</b> Make sure it's switched on and on the same Wi-Fi${NATIVE ? ' — or in Hotspot mode with your phone joined to it' : ''}. Retrying…${NATIVE ? ` <a href="#connect" style="text-decoration:underline">Find my Poly</a>` : ''}${err ? `<br><small>${esc(err)}</small>` : ''}</div>`;
+}
+let pending = new Set(), flushT = null;
+function onChanged(list) { list.forEach(x => pending.add(x)); clearTimeout(flushT); flushT = setTimeout(flush, 120); }
+async function flush() {
+  const ch = pending; pending = new Set();
+  const view = route()[0];
+  try {
+    if (ch.has('database')) { await loadLibrary(); toast(`Library updated · ${plural(L.songs.length, 'song')}`); if (['artists','artist','albums','album','genres','genre','folders','search','settings'].includes(view)) render(true); }
+    if (ch.has('playlist')) { await loadQueue(); if (view === 'queue' || view === 'now') render(true); }
+    if (ch.has('stored_playlist')) { await loadPlaylists(); if (view === 'playlists' || view === 'playlist') render(true); }
+    if (ch.has('player') || ch.has('mixer') || ch.has('options') || ch.has('update') || ch.has('playlist')) await refreshStatus();
+    if (ch.has('options') && view === 'queue') render(true);
+    if (ch.has('update') && view === 'settings') render(true);
+  } catch (e) { setConn(false, e.message); }
+}
+function connectEvents() {
+  if (NATIVE) {
+    if (S.eventsOn) return; S.eventsOn = true;
+    Mpd.addListener('connection', m => { setConn(m.connected, m.error); if (m.connected) onChanged(['player', 'playlist', 'stored_playlist']); });
+    Mpd.addListener('changed', m => { setConn(true); onChanged(m.changed); });
+    return;
+  }
+  const es = new EventSource('/api/events');
+  es.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if ('connected' in m) { setConn(m.connected, m.error); if (m.connected) onChanged(['player', 'playlist', 'stored_playlist']); }
+    if (m.changed) { setConn(true); onChanged(m.changed); }
+  };
+  es.onerror = () => setConn(false, 'Bridge not responding — is server.py still running?');
+}
+
+// ============================================================ boot
+window.addEventListener('hashchange', () => { S.queueScrolled = false; render(); });
+async function boot() {
+  try {
+    await loadLibrary();
+    await Promise.all([loadQueue(), loadPlaylists()]);
+    await refreshStatus();
+    setConn(true);
+  } catch (e) { setConn(false, e.message); }
+  connectEvents();
+}
+(async () => {
+  $('#view').innerHTML = `<div class="empty"><span class="spin" style="display:inline-block"></span><br>${NATIVE ? 'Looking for your Poly…' : 'Loading your library…'}</div>`;
+  if (NATIVE) {
+    if (!(await nativeConnect().catch(() => false))) { location.hash = '#connect'; render(); return; }
+  } else {
+    S.info = await fetch('/api/info').then(r => r.json()).catch(() => ({}));
+  }
+  await boot();
+  if (route()[0] === 'search') $('#sideSearch').value = route()[1] || '';
+  if (route()[0] === 'connect') location.hash = '#playlists'; else render();
+})();
+</script>
+</body>
+</html>

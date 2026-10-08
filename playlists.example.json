@@ -1,0 +1,32 @@
+{
+  "_help": [
+    "Copy this file to playlists.json and edit it for your SD card. Paths are folders on the card, relative to its root.",
+    "playlists: fixed playlists, name -> list of folders. \"*\" means every song; a trailing * matches folder-name prefixes.",
+    "per_folder: one playlist for every subfolder (artist, album, game...) that has at least min_tracks songs.",
+    "rename: text replacements applied to per_folder names, e.g. to drop \" (Explicit)\" or quality tags.",
+    "Start names with a digit and \". \" (\"1. Mix - ...\") so they sort into groups; only those are ever replaced, so playlists you make in Molly Remote are kept."
+  ],
+  "playlists": {
+    "1. Mix - Chill": ["Music/Pop/Norah Jones", "Music/Pop/Ed Sheeran", "Music/Rock/Coldplay/Parachutes"],
+    "1. Mix - Workout": ["Music/Rock/Linkin Park", "Music/Rock/Foo Fighters", "Music/Electronic"],
+    "1. Mix - Focus (No Vocals)": ["Classical", "Soundtracks"],
+    "2. Genre - Pop": ["Music/Pop"],
+    "2. Genre - Rock": ["Music/Rock"],
+    "2. Genre - Classical": ["Classical"],
+    "2. Genre - Everything": ["*"],
+    "5. HiFi - Test Tracks": ["HiFi/Test*"]
+  },
+  "per_folder": [
+    {"folder": "Music/Pop", "prefix": "3. Artist - "},
+    {"folder": "Music/Rock", "prefix": "3. Artist - "},
+    {"folder": "Soundtracks", "prefix": "3. Soundtrack - "},
+    {"folder": "Music/Pop/Taylor Swift", "prefix": "4. Taylor - ", "min_tracks": 8}
+  ],
+  "min_tracks": 5,
+  "rename": {
+    " (Explicit)": "",
+    " (Deluxe)": "",
+    " Original Soundtrack": "",
+    "_ ": " - "
+  }
+}

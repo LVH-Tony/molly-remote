@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Molly Remote</string>
+    <string name="title_activity_main">Molly Remote</string>
+    <string name="package_name">io.github.lvhtony.mollyremote</string>
+    <string name="custom_url_scheme">io.github.lvhtony.mollyremote</string>
+</resources>

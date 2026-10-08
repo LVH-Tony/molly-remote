@@ -1,0 +1,15 @@
+{
+  "name": "molly-remote-app",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "sync": "cp ../remote/index.html web/index.html && npx cap sync android",
+    "apk": "npm run sync && cd android && JAVA_HOME=\"${JAVA_HOME:-/Applications/Android Studio.app/Contents/jbr/Contents/Home}\" ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../MollyRemote.apk && echo Built debug ../MollyRemote.apk",
+    "release": "npm run sync && cd android && JAVA_HOME=\"${JAVA_HOME:-/Applications/Android Studio.app/Contents/jbr/Contents/Home}\" ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../MollyRemote.apk && echo Built signed release ../MollyRemote.apk"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}
