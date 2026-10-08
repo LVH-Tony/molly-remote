@@ -176,6 +176,12 @@ def main():
     for m in missing:
         print("  no cover:", m)
     subprocess.run(["dot_clean", "-m", ROOT], stderr=subprocess.DEVNULL)
+    # dot_clean can't pair up some accented names; any "._" file left over is still junk to the Poly
+    for d, dirs, files in os.walk(ROOT):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        for f in files:
+            if f.startswith("._"):
+                os.remove(os.path.join(d, f))
 
 
 if __name__ == "__main__":

@@ -96,6 +96,12 @@ def main():
 
     # macOS drops "._" junk files next to everything it writes on exFAT; the Poly reads them as broken tracks.
     subprocess.run(["dot_clean", "-m", root], stderr=subprocess.DEVNULL)
+    # dot_clean can't pair up some accented names; any "._" file left over is still junk to the Poly
+    for d, dirs, files in os.walk(root):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        for f in files:
+            if f.startswith("._"):
+                os.remove(os.path.join(d, f))
 
 
 if __name__ == "__main__":
