@@ -23,6 +23,8 @@ The Poly runs a standard music server (MPD) on port 6600. Molly Remote talks to 
 3. Connect the phone to the same Wi-Fi as the Poly and open the app. It finds the Poly by itself.
 4. First time only: if songs or playlists are missing, tap **More → Scan for new music**.
 
+**Updates:** the app checks GitHub for a new version when it opens; a dot appears on **More**. Tap **More → App updates → Download & install**. The first time, Android asks you to allow Molly Remote to install apps. Version 1.0.2 is the first with this, so earlier versions need one manual update.
+
 **Outside the house:** switch the Poly to **Hotspot mode** in GoFigure, then join the Poly's Wi-Fi on your phone. If Android says the network has no internet, choose **Keep connection**. No internet is needed.
 
 You still need GoFigure for Poly settings: hotspot or network mode, and the DSD / bit-perfect switch.

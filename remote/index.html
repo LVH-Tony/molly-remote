@@ -221,6 +221,10 @@ code{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:12.5px
 .dev:hover{border-color:var(--accent)}
 .dev b{display:block}.dev small{color:var(--muted)}
 .steps{margin:6px 0 0;padding-left:20px;color:var(--muted)}.steps li{margin:4px 0}
+.prog{height:6px;border-radius:6px;background:#24343d;overflow:hidden;margin-top:12px}.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.notes{color:var(--muted);font-size:13px;margin:10px 0 0;max-height:160px;overflow:auto;white-space:pre-wrap}
+[data-nav].has-update{position:relative}[data-nav].has-update::after{content:'';position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.nav [data-nav].has-update::after{right:10px;top:50%;margin-top:-4px}
 
 /* ---------- touch screens (phones, Fold inner screen): nothing may depend on hover */
 @media (hover:none){
@@ -370,6 +374,8 @@ const initials = s => (String(s).replace(/[\[(].*?[\])]/g,'').match(/[\p{L}\p{N}
 // Browser: through remote/server.py. Android app: straight to the Poly via the native Mpd plugin (app/android/.../MpdPlugin.java).
 const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 const Mpd = NATIVE ? window.Capacitor.Plugins.Mpd : null;   // proxy injected by the native bridge (no @capacitor/core bundle needed)
+const Upd = NATIVE ? window.Capacitor.Plugins.Update : null;
+const REPO = 'LVH-Tony/molly-remote';
 async function api(cmds) {
   if (NATIVE) {
     try { return (await Mpd.run({commands:cmds.map(c => c.map(String))})).results; }
@@ -873,9 +879,71 @@ async function discover() {
   S.searching = false; if (route()[0] === 'connect') render(true);
 }
 
+// ---- App updates (Android): newest GitHub release -> download -> Android's installer
+const semver = v => String(v || '').replace(/^v/, '').split('.').map(n => parseInt(n) || 0);
+const newer = (a, b) => { const x = semver(a), y = semver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+async function checkUpdate(manual) {
+  if (!NATIVE) return;
+  S.upd = S.upd || {};
+  if (!S.upd.current) S.upd.current = (await Upd.appInfo().catch(() => ({}))).versionName;
+  let last = 0; try { last = +localStorage.updChecked || 0; } catch {}
+  if (!manual && Date.now() - last < 12 * 3600e3 && S.upd.latest === undefined) {
+    try { Object.assign(S.upd, JSON.parse(localStorage.updInfo || '{}')); } catch {}
+  } else {
+    S.upd.checking = true; if (route()[0] === 'settings') render(true);
+    try {
+      const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {headers:{Accept:'application/vnd.github+json'}});
+      if (!r.ok) throw new Error('GitHub said ' + r.status);
+      const d = await r.json(), apk = (d.assets || []).find(a => /\.apk$/i.test(a.name));
+      Object.assign(S.upd, {latest:d.tag_name, notes:(d.body || '').slice(0, 1500), url:apk && apk.browser_download_url, error:null});
+      try { localStorage.updChecked = Date.now(); localStorage.updInfo = JSON.stringify({latest:S.upd.latest, notes:S.upd.notes, url:S.upd.url}); } catch {}
+    } catch (e) { S.upd.error = navigator.onLine === false ? 'No internet right now' : 'Couldn\'t reach GitHub — try again later'; }
+    S.upd.checking = false;
+  }
+  S.upd.available = !!(S.upd.url && newer(S.upd.latest, S.upd.current));
+  $$('[data-nav="settings"]').forEach(a => a.classList.toggle('has-update', S.upd.available));
+  if (S.upd.available && !manual && !S.upd.told) { S.upd.told = true; toast(`Molly Remote ${esc(S.upd.latest)} is available — More → App updates`); }
+  if (manual && !S.upd.available && !S.upd.error) toast("You're on the latest version");
+  if (route()[0] === 'settings') render(true);
+}
+async function installUpdate() {
+  if (!(await Upd.canInstall()).allowed) {
+    S.upd.needsPermission = true; render(true); return;
+  }
+  S.upd.needsPermission = false; S.upd.progress = 0; render(true);
+  const h = await Upd.addListener('progress', p => {
+    const pct = p.total > 0 ? Math.round(100 * p.received / p.total) : 0;
+    S.upd.progress = pct;
+    const bar = $('#updBar'), lbl = $('#updPct');
+    if (bar) bar.style.width = pct + '%';
+    if (lbl) lbl.textContent = `Downloading… ${pct}%`;
+  });
+  try { await Upd.downloadAndInstall({url:S.upd.url}); S.upd.progress = 100; }
+  catch (e) { toast(esc(e.message || 'Download failed'), true); S.upd.progress = null; }
+  finally { h && h.remove && h.remove(); render(true); }
+}
+function updatePanel() {
+  if (!NATIVE) return `<div class="panel"><h3>Android app</h3>Get <b>Molly Remote</b> for Android from <a href="https://github.com/${REPO}/releases/latest" target="_blank" rel="noopener" style="color:var(--accent-hi)">GitHub Releases</a>.</div>`;
+  const u = S.upd || {};
+  const head = `<h3>App updates</h3><div class="row"><span>Version <b>${esc(u.current || '…')}</b>${u.available ? ` · <span style="color:var(--warn)"><b>${esc(u.latest)}</b> is available</span>` : u.latest ? ' · up to date' : ''}</span>`;
+  if (u.progress != null && u.progress < 100) return `<div class="panel">${head}</div><div class="prog"><i id="updBar" style="width:${u.progress}%"></i></div><div class="muted" id="updPct" style="margin-top:6px;font-size:12.5px">Downloading… ${u.progress}%</div></div>`;
+  return `<div class="panel">${head}
+    ${u.available ? `<button class="btn" data-act="update-install" style="margin-left:auto">${ic('refresh','sm')}Download &amp; install</button>` : `<button class="btn ghost sm" data-act="update-check" style="margin-left:auto">${u.checking ? '<span class="spin"></span>Checking…' : 'Check for updates'}</button>`}</div>
+    ${u.needsPermission ? `<div class="banner" style="margin:12px 0 0">Android needs your OK once: tap <b>Open settings</b>, switch on <b>Allow from this source</b>, come back and tap <b>Download &amp; install</b> again.<div class="row" style="margin-top:10px"><button class="btn sm" data-act="update-settings">Open settings</button></div></div>` : ''}
+    ${u.progress === 100 ? '<div class="muted" style="margin-top:10px;font-size:12.5px">Downloaded — confirm the install in Android\'s window. The app restarts on the new version.</div>' : ''}
+    ${u.available && u.notes ? `<div class="notes">${esc(u.notes)}</div>` : ''}
+    ${u.error ? `<div class="muted" style="margin-top:10px;font-size:12.5px">${esc(u.error)}</div>` : ''}</div>`;
+}
+
 // ---- Settings
 VIEWS.settings = async () => {
-  const [stats, outs, rg] = await api([['stats'], ['outputs'], ['replay_gain_status']]);
+  let stats, outs, rg;
+  try { [stats, outs, rg] = await api([['stats'], ['outputs'], ['replay_gain_status']]); }
+  catch (e) {   // no Poly reachable: still offer updates and the connect screen
+    return `<div class="vh"><div class="grow"><h1>Settings</h1><div class="sub">Not connected to a Poly</div></div></div>
+      ${updatePanel()}
+      <div class="panel"><h3>Poly connection</h3><div class="row"><span class="muted">${esc(e.message)}</span><a class="btn sm" href="#connect" style="margin-left:auto">Find my Poly</a></div></div>`;
+  }
   const s = obj(stats), st = S.status;
   const outputs = group(outs.map(([k, v]) => k === 'outputid' ? ['directory', v] : [k, v]));
   if (!S.info.mpd && !NATIVE) S.info = await fetch('/api/info').then(r => r.json()).catch(() => ({}));
@@ -894,6 +962,7 @@ VIEWS.settings = async () => {
       <label class="row">Crossfade <select class="input" style="width:auto" data-act-change="crossfade">${[0,2,4,6,8].map(n => `<option value="${n}"${+(st.xfade||0) === n ? ' selected' : ''}>${n ? n + ' s' : 'Off'}</option>`).join('')}</select></label>
       <label class="row">Replay gain <select class="input" style="width:auto" data-act-change="replaygain">${['off','track','album','auto'].map(m => `<option${obj(rg).replay_gain_mode === m ? ' selected' : ''}>${m}</option>`).join('')}</select></label></div>
       <p class="muted" style="margin:12px 0 0;font-size:12.5px">Leave both off for bit-perfect playback.</p></div>
+    ${updatePanel()}
     ${NATIVE ? `<div class="panel"><h3>Poly connection</h3><div class="row"><span>${esc(S.info.name)} · <code>${esc(S.info.mpd)}</code></span><a class="btn ghost sm" href="#connect" style="margin-left:auto">Change…</a></div></div>` : `<div class="panel"><h3>Use it on your phone</h3>${S.info.lan_url ? `Open <code>${esc(S.info.lan_url)}</code> on any device on the same Wi-Fi, then “Add to Home Screen”.` : 'Run the bridge with your Mac on Wi-Fi to get a phone link.'}</div>`}`;
 };
 
@@ -1112,6 +1181,9 @@ const ACT = {
     toast(`Removed ${plural(items.length, 'song')}`); ACT['sel-clear']();
   },
   discover: () => discover(),
+  'update-check': () => checkUpdate(true),
+  'update-install': () => installUpdate(),
+  'update-settings': () => Upd.openInstallSettings(),
   'use-dev': async el => { await useHost(S.found[+el.dataset.i]); await boot(); location.hash = '#playlists'; },
   'connect-manual': async () => {
     const host = $('#manualHost').value.trim(); if (!host) return;
@@ -1247,6 +1319,7 @@ async function boot() {
 (async () => {
   $('#view').innerHTML = `<div class="empty"><span class="spin" style="display:inline-block"></span><br>${NATIVE ? 'Looking for your Poly…' : 'Loading your library…'}</div>`;
   if (NATIVE) {
+    checkUpdate(false);   // independent of the Poly — updates must work even when it can't be found
     if (!(await nativeConnect().catch(() => false))) { location.hash = '#connect'; render(); return; }
   } else {
     S.info = await fetch('/api/info').then(r => r.json()).catch(() => ({}));
