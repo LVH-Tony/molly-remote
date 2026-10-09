@@ -70,6 +70,7 @@ def clean(s):
 
 def sim(a, b):
     a, b = fold(clean(a)), fold(clean(b))
+    a, b = (re.sub(r"\s*(,|&| and | x | feat\.? )\s*", " & ", x) for x in (a, b))   # "A, B" == "A & B"
     if not a or not b:
         return 0
     short, long_ = sorted((a, b), key=len)
@@ -96,6 +97,13 @@ def online(artist, album):
         if best and sim(album, best["collectionName"]) >= 0.6 and (not artist or sim(artist, best["artistName"]) >= 0.5):
             url = best["artworkUrl100"].replace("100x100bb", "1000x1000bb")
             return get(url, True), f"iTunes: {best['artistName']} — {best['collectionName']}"
+        # singles often only show up as songs: match the song's album instead
+        res = get("https://itunes.apple.com/search?" + urllib.parse.urlencode(
+            {"term": f"{q_artist} {q_album}", "entity": "song", "limit": 25}))["results"]
+        for r in res:
+            if sim(album, r.get("collectionName", "")) >= 0.6 and (not artist or sim(artist, r.get("artistName", "")) >= 0.5):
+                url = r["artworkUrl100"].replace("100x100bb", "1000x1000bb")
+                return get(url, True), f"iTunes: {r['artistName']} — {r['collectionName']}"
     except Exception as e:  # noqa: BLE001
         print("    iTunes lookup failed:", e)
     # MusicBrainz + Cover Art Archive: good for classical / audiophile / soundtracks
