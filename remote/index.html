@@ -180,7 +180,8 @@ a.chip:hover{border-color:var(--accent);color:var(--text)}
 .p-seek{display:flex;align-items:center;gap:10px;width:100%;max-width:560px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
 .p-seek span{width:44px;text-align:center}
 .p-right{display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
-.icon-btn .rep1{position:absolute;font-size:9px;font-weight:800;margin:10px 0 0 10px;color:var(--accent-hi)}
+.icon-btn{position:relative}
+.icon-btn .rep1{position:absolute;right:3px;bottom:3px;font-size:10px;font-weight:800;line-height:1;color:var(--accent-hi)}
 input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--accent) var(--p,0%),#2a3a43 var(--p,0%));outline:0;cursor:pointer}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
 input[type=range]:hover::-webkit-slider-thumb{opacity:1}
@@ -672,6 +673,7 @@ VIEWS.now = async () => {
           <button class="icon-btn" data-act="prev">${ic('prev','lg')}</button>
           <button class="big-play" data-act="toggle">${ic(st.state === 'play' ? 'pause' : 'play')}</button>
           <button class="icon-btn" data-act="next">${ic('next','lg')}</button>
+          <button class="icon-btn lg ${st.repeat === '1' ? 'on' : ''}" data-act="repeat" title="${st.repeat !== '1' ? 'Repeat off' : st.single === '1' ? 'Repeating one song' : 'Repeating queue'}">${ic('repeat')}${st.repeat === '1' && st.single === '1' ? '<span class="rep1">1</span>' : ''}</button>
           <button class="icon-btn" data-act="track-menu-current" title="More">${ic('more')}</button>
         </div>
       </div>
@@ -1056,7 +1058,11 @@ const ACT = {
   toggle: () => S.status.state === 'play' ? api([['pause', 1]]) : S.queue.length || S.status.playlistlength !== '0' ? api([['play']]) : toast('Queue is empty — pick something to play'),
   prev: () => api([['previous']]), next: () => api([['next']]),
   random: () => api([['random', S.status.random === '1' ? 0 : 1]]),
-  repeat: () => { const r = S.status.repeat === '1', s = S.status.single === '1'; return api(!r ? [['repeat', 1], ['single', 0]] : !s ? [['single', 1]] : [['repeat', 0], ['single', 0]]); },
+  repeat: async () => {
+    const r = S.status.repeat === '1', s = S.status.single === '1';
+    await api(!r ? [['repeat', 1], ['single', 0]] : !s ? [['single', 1]] : [['repeat', 0], ['single', 0]]);
+    toast(!r ? 'Repeat queue' : !s ? 'Repeat one song' : 'Repeat off');
+  },
   consume: () => api([['consume', S.status.consume === '1' ? 0 : 1]]),
   menu: el => { const row = el.closest('.tr'); trackMenu(el, +row.dataset.l, +row.dataset.i); },
   'track-menu-current': el => { if (!S.current) return; const l = registerList([S.current], {type:'current'}); trackMenu(el, l, 0); },
@@ -1207,7 +1213,7 @@ async function flush() {
     if (ch.has('playlist')) { await loadQueue(); if (view === 'queue' || view === 'now') render(true); }
     if (ch.has('stored_playlist')) { await loadPlaylists(); if (view === 'playlists' || view === 'playlist') render(true); }
     if (ch.has('player') || ch.has('mixer') || ch.has('options') || ch.has('update') || ch.has('playlist')) await refreshStatus();
-    if (ch.has('options') && view === 'queue') render(true);
+    if (ch.has('options') && (view === 'queue' || view === 'now')) render(true);
     if (ch.has('update') && view === 'settings') render(true);
   } catch (e) { setConn(false, e.message); }
 }
