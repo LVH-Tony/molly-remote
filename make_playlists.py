@@ -101,7 +101,12 @@ def main():
         dirs[:] = [x for x in dirs if not x.startswith(".")]
         for f in files:
             if f.startswith("._"):
-                os.remove(os.path.join(d, f))
+                for name in {f, unicodedata.normalize("NFC", f), unicodedata.normalize("NFD", f)}:
+                    try:
+                        os.remove(os.path.join(d, name))
+                        break
+                    except FileNotFoundError:   # exFAT on macOS may list a name in a form it won't open
+                        continue
 
 
 if __name__ == "__main__":

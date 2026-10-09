@@ -57,6 +57,7 @@ The app and bridge never send anything off your network. The only exception is `
 ## Troubleshooting
 | Problem | Fix |
 |---|---|
+| Finder "Replace" deleted a folder's other albums | Stop writing to the card, `diskutil unmount` it (don't eject), then `sudo python3 recover_exfat.py /dev/rdiskNs1 "Music/Pop/Artist" ~/Recovered` (find `diskNs1` with `diskutil list`). It only reads the card. On a Mac, merge folders with `ditto` or copy album folders one at a time — Finder's "Replace" swaps the whole folder |
 | "Playlist malformed" / songs "corrupted" | Run `make_playlists.py` to remove the `._` files, then **Settings → Scan for new music** |
 | App can't find the Poly | Check it's on the same Wi-Fi or hotspot, then **More → Change… → Search again**, or type its IP address |
 | No covers | Run `covers.py`, put the card back in the Poly, then **Scan for new music** |
